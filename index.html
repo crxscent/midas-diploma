@@ -1,0 +1,1727 @@
+\<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MIDAS | Дипломний Проект</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Fira+Code:wght@300;400;500&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #C5A059;
+  --gold-bright: #E8D5A3;
+  --gold-dark: #8A6830;
+  --gold-glow: rgba(197,160,89,0.25);
+  --bg: #0D0905;
+  --bg2: #130C06;
+  --surface: #1C1208;
+  --surface2: #251A0A;
+  --text: #E8DDD0;
+  --text-dim: #7A6A55;
+  --text-muted: #3D3020;
+  --border: rgba(197,160,89,0.14);
+  --border-bright: rgba(197,160,89,0.4);
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-serif: 'Libre Baskerville', serif;
+  --font-mono: 'Fira Code', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-mono); overflow: hidden; }
+
+.page { display: none; width: 100%; height: 100vh; }
+.page.active { display: flex; flex-direction: column; }
+
+#gear-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+
+/* COIN SYMBOL BEHIND HERO */
+.hero-coin {
+  position: absolute; top: 50%; left: 50%;
+  width: 640px; height: 640px;
+  transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0.18;
+  filter: drop-shadow(0 0 40px rgba(197,160,89,0.25));
+  transition: opacity 0.6s;
+  transform-style: preserve-3d;
+}
+.hero-coin svg { width: 100%; height: 100%; }
+.hero-coin.spinning { animation: coin-spin 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1; }
+.hero-coin.idle { animation: coin-idle 26s linear infinite; }
+@keyframes coin-spin {
+  0%   { transform: translate(-50%, -50%) rotateY(0deg)    scale(1); opacity: 0.18; }
+  35%  { transform: translate(-50%, -50%) rotateY(360deg)  scale(0.6); opacity: 0.02; }
+  50%  { transform: translate(-50%, -50%) rotateY(540deg)  scale(0.5); opacity: 0.02; }
+  100% { transform: translate(-50%, -50%) rotateY(1080deg) scale(1); opacity: 0.18; }
+}
+@keyframes coin-idle {
+  0%   { transform: translate(-50%, -50%) rotateY(0deg); }
+  100% { transform: translate(-50%, -50%) rotateY(360deg); }
+}
+
+/* MODE TOGGLE (same look as lang-toggle but independent) */
+.mode-toggle {
+  display: flex; align-items: center; gap: 0;
+  border: 2px solid var(--border-bright); border-radius: 2px; overflow: hidden;
+  background: var(--surface);
+}
+.mode-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px; background: none; border: none; cursor: pointer;
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--text-muted);
+  transition: all 0.3s; white-space: nowrap;
+}
+.mode-btn.active { background: var(--gold-dark); color: var(--bg); }
+.mode-btn:not(.active):hover { background: rgba(197,160,89,0.1); color: var(--gold); }
+.mode-icon { width: 16px; height: 16px; display: inline-block; border-radius: 50%; flex-shrink: 0; }
+.mode-icon.xau { background: radial-gradient(circle at 35% 30%, #FFE9A8, #C5A059 55%, #6B4E1A); }
+.mode-icon.btc { background: radial-gradient(circle at 35% 30%, #FFCB7A, #F7931A 55%, #8A4E00); position: relative; }
+.mode-icon.btc::after { content: '₿'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: 900; font-family: var(--font-display); }
+
+/* BTC MODE OVERRIDES */
+body.mode-btc {
+  --gold: #F7931A;
+  --gold-bright: #FFB84D;
+  --gold-dark: #B86D00;
+  --gold-glow: rgba(247,147,26,0.28);
+  --border-bright: rgba(247,147,26,0.4);
+  --border: rgba(247,147,26,0.14);
+}
+body.mode-btc .flag-ua, body.mode-btc .flag-en { /* keep flags */ }
+
+/* NAV */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 52px;
+  border-bottom: 2px solid var(--border);
+  background: linear-gradient(180deg, rgba(13,9,5,0.97) 0%, transparent 100%);
+  backdrop-filter: blur(16px);
+}
+
+.nav-logo {
+  font-family: var(--font-display); font-weight: 900; font-size: 32px;
+  letter-spacing: 0.18em;
+  background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold-bright) 55%, var(--gold-dark) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  cursor: pointer;
+}
+
+.nav-links { display: flex; gap: 40px; list-style: none; }
+.nav-links a, .nav-links button {
+  background: none; border: none; color: var(--text-dim);
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em;
+  text-transform: uppercase; cursor: pointer; text-decoration: none;
+  transition: color 0.3s; font-weight: 500;
+}
+.nav-links a:hover, .nav-links button:hover { color: var(--gold); }
+
+.nav-right { display: flex; align-items: center; gap: 14px; }
+
+/* LANGUAGE TOGGLE */
+.lang-toggle {
+  display: flex; align-items: center; gap: 0;
+  border: 2px solid var(--border-bright); border-radius: 2px; overflow: hidden;
+  background: var(--surface);
+}
+
+.lang-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px;
+  background: none; border: none; cursor: pointer;
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--text-muted);
+  transition: all 0.3s; white-space: nowrap;
+}
+.lang-btn.active { background: var(--gold-dark); color: var(--bg); }
+.lang-btn:not(.active):hover { background: rgba(197,160,89,0.1); color: var(--gold); }
+
+/* UA/EN flag inline */
+.flag-ua {
+  width: 20px; height: 13px; display: inline-block;
+  background: linear-gradient(to bottom, #FFD700 50%, #005BBB 50%); /* flipped: yellow top, blue bottom */
+  border-radius: 1px; flex-shrink: 0;
+}
+.flag-en {
+  width: 20px; height: 13px; display: inline-block; flex-shrink: 0;
+  border-radius: 1px; overflow: hidden; position: relative;
+  background: #012169;
+}
+.flag-en::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to bottom right, transparent calc(50% - 1.5px), #fff calc(50% - 1.5px), #fff calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+              linear-gradient(to bottom left, transparent calc(50% - 1.5px), #fff calc(50% - 1.5px), #fff calc(50% + 1.5px), transparent calc(50% + 1.5px));
+}
+.flag-en::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(transparent calc(50% - 2px), #CF142B calc(50% - 2px), #CF142B calc(50% + 2px), transparent calc(50% + 2px)),
+              linear-gradient(90deg, transparent calc(50% - 2px), #CF142B calc(50% - 2px), #CF142B calc(50% + 2px), transparent calc(50% + 2px));
+}
+
+.nav-btn {
+  padding: 11px 30px; border: 2px solid var(--border-bright); border-radius: 2px;
+  background: none; color: var(--gold); font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.22em; text-transform: uppercase; cursor: pointer; transition: all 0.3s; font-weight: 500;
+}
+.nav-btn:hover { background: var(--gold); color: var(--bg); }
+
+/* HOME WRAPPER */
+#home-wrapper { height: 100vh; overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth; display: none; }
+#home-wrapper.active { display: block; }
+#home-wrapper::-webkit-scrollbar { display: none; }
+
+.snap-section { scroll-snap-align: start; scroll-snap-stop: always; height: 100vh; position: relative; display: flex; align-items: center; justify-content: center; }
+
+/* HERO */
+.home-content { position: relative; z-index: 10; text-align: center; max-width: 960px; padding: 0 24px; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 14px; font-size: 9px; letter-spacing: 0.4em;
+  text-transform: uppercase; color: var(--text-muted); margin-bottom: 36px; font-family: var(--font-mono);
+}
+.eyebrow::before, .eyebrow::after { content: ''; display: block; width: 44px; height: 2px; background: linear-gradient(90deg, transparent, var(--gold-dark)); }
+.eyebrow::after { transform: scaleX(-1); }
+
+h1.hero-title { font-family: var(--font-display); font-weight: 900; font-size: clamp(72px, 12vw, 160px); line-height: 0.85; letter-spacing: 0.06em; color: var(--text); margin-bottom: 16px; text-transform: uppercase; }
+h1.hero-title em {
+  font-style: italic; font-weight: 300; font-family: var(--font-serif);
+  background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold-bright) 60%, var(--gold) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  display: block; font-size: 0.55em; letter-spacing: 0.02em; line-height: 1.2; margin-top: 8px;
+}
+
+.hero-sub { font-size: 12px; color: var(--text-dim); letter-spacing: 0.06em; line-height: 2; max-width: 540px; margin: 32px auto 52px; font-weight: 300; }
+.cta-group { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+
+.btn-primary {
+  padding: 17px 52px; background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+  background-size: 200% 100%; border: none; color: #0D0905; font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.28em; text-transform: uppercase; cursor: pointer; border-radius: 2px; transition: all 0.4s; font-weight: 500;
+}
+.btn-primary:hover { background-position: right center; box-shadow: 0 8px 48px var(--gold-glow), 0 0 0 2px var(--gold-dark); transform: translateY(-2px); }
+
+.btn-ghost {
+  padding: 17px 36px; background: none; border: 2px solid var(--border-bright); color: var(--text-dim);
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+  cursor: pointer; border-radius: 2px; transition: all 0.3s; font-weight: 500;
+}
+.btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+.scroll-hint {
+  position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: var(--text-muted); font-size: 8px; letter-spacing: 0.3em; text-transform: uppercase;
+  animation: bounce 2s infinite; z-index: 10; font-family: var(--font-mono);
+}
+.scroll-hint::after { content: ''; width: 2px; height: 44px; background: linear-gradient(180deg, var(--gold-dark), transparent); }
+@keyframes bounce { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(8px); } }
+
+/* SECTION */
+.section { position: relative; z-index: 10; min-height: 100vh; display: flex; align-items: center; padding: 80px 52px; }
+.container { max-width: 1240px; margin: 0 auto; width: 100%; }
+
+.section-label { font-size: 9px; letter-spacing: 0.38em; text-transform: uppercase; color: var(--gold-dark); margin-bottom: 16px; display: flex; align-items: center; gap: 14px; font-family: var(--font-mono); font-weight: 500; }
+.section-label::before { content: ''; width: 28px; height: 2px; background: var(--gold-dark); }
+
+.section-title { font-family: var(--font-display); font-size: clamp(44px, 6vw, 76px); font-weight: 700; line-height: 0.95; letter-spacing: 0.04em; color: var(--text); margin-bottom: 52px; text-transform: uppercase; }
+.section-title em { font-style: italic; font-family: var(--font-serif); font-weight: 400; color: var(--gold); text-transform: none; font-size: 0.9em; }
+
+/* KPI GRID */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2px; background: var(--border); border: 2px solid var(--border); margin-bottom: 52px; }
+.kpi-card { background: var(--surface); padding: 36px 30px; position: relative; overflow: hidden; transition: background 0.3s; }
+.kpi-card:hover { background: var(--surface2); }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--gold-dark), transparent); opacity: 0; transition: opacity 0.3s; }
+.kpi-card:hover::before { opacity: 1; }
+.kpi-label { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; font-family: var(--font-mono); }
+.kpi-value { font-family: var(--font-display); font-size: 48px; font-weight: 700; letter-spacing: 0.04em; line-height: 1; color: var(--gold-bright); }
+.kpi-unit { font-size: 16px; color: var(--gold-dark); margin-left: 4px; }
+.kpi-delta { font-size: 10px; margin-top: 10px; color: var(--text-muted); font-family: var(--font-mono); }
+.kpi-delta.pos { color: #6DB87A; }
+.kpi-delta.neg { color: #C4726A; }
+
+/* CHARTS */
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-bottom: 28px; }
+@media (max-width: 768px) { .charts-row { grid-template-columns: 1fr; } }
+.chart-panel { background: var(--surface); border: 2px solid var(--border); border-radius: 3px; overflow: hidden; }
+.chart-header { padding: 18px 22px; border-bottom: 2px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.chart-title { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); font-family: var(--font-mono); font-weight: 500; }
+.chart-meta { font-size: 9px; color: var(--text-muted); font-family: var(--font-mono); }
+.bar-chart { padding: 22px; height: 150px; display: flex; align-items: flex-end; gap: 4px; }
+.bar { flex: 1; border-radius: 2px 2px 0 0; position: relative; transition: opacity 0.3s; cursor: pointer; }
+.bar:hover { opacity: 0.75; }
+.bar::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%); background: var(--surface2); border: 2px solid var(--border-bright); color: var(--gold-bright); font-size: 8px; padding: 4px 10px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; border-radius: 2px; font-family: var(--font-mono); }
+.bar:hover::after { opacity: 1; }
+.sparkline { width: 100%; height: 130px; }
+
+/* STATS TABLE */
+.stats-table { width: 100%; border-collapse: collapse; font-size: 11px; font-family: var(--font-mono); }
+.stats-table th { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-muted); text-align: left; padding: 12px 18px; border-bottom: 2px solid var(--border); font-weight: 500; }
+.stats-table td { padding: 14px 18px; border-bottom: 2px solid var(--border); color: var(--text); }
+.stats-table tr:hover td { background: var(--surface2); }
+.stats-table td.val { color: var(--gold-bright); font-family: var(--font-display); font-size: 16px; font-weight: 700; letter-spacing: 0.04em; }
+.stats-table td.pos { color: #6DB87A; }
+.stats-table td.neg { color: #C4726A; }
+
+/* BACKTEST IMG */
+.backtest-img-wrap { position: relative; overflow: hidden; border-radius: 3px; background: var(--surface); }
+.backtest-img-wrap img { width: 100%; display: block; }
+.img-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 60%, var(--surface) 100%); }
+
+/* HALL OF FAME */
+.hof-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 36px; margin-top: 52px; }
+.cert-card { position: relative; background: var(--surface); border: 2px solid var(--border); border-radius: 6px; overflow: hidden; transition: all 0.4s; cursor: pointer; }
+.cert-card:hover { border-color: var(--gold-dark); transform: translateY(-5px); box-shadow: 0 24px 70px rgba(0,0,0,0.55), 0 0 0 2px var(--gold-dark), inset 0 0 60px rgba(197,160,89,0.04); }
+.cert-badge { position: absolute; top: 18px; right: 18px; padding: 5px 14px; border: 2px solid var(--gold-dark); border-radius: 2px; font-size: 8px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--gold); background: rgba(13,9,5,0.88); backdrop-filter: blur(4px); z-index: 5; font-family: var(--font-mono); font-weight: 500; }
+.cert-img-wrap { height: 270px; overflow: hidden; position: relative; }
+.cert-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease; }
+.cert-card:hover .cert-img-wrap img { transform: scale(1.05); }
+.cert-info { padding: 26px; border-top: 2px solid var(--border); }
+.cert-org { font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold-dark); margin-bottom: 8px; font-family: var(--font-mono); }
+.cert-name { font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 8px; line-height: 1.3; }
+.cert-date { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
+.cert-verify { display: inline-flex; align-items: center; gap: 7px; margin-top: 18px; font-size: 9px; letter-spacing: 0.18em; color: var(--gold-dark); text-transform: uppercase; font-family: var(--font-mono); }
+.cert-verify::before { content: '✓'; width: 18px; height: 18px; border: 2px solid var(--gold-dark); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; }
+
+/* METHODOLOGY */
+.method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+@media (max-width: 768px) { .method-grid { grid-template-columns: 1fr; } }
+.feature-list { list-style: none; }
+.feature-item { display: flex; gap: 22px; padding: 22px 0; border-bottom: 2px solid var(--border); }
+.feature-item:last-child { border-bottom: none; }
+.feature-num { font-family: var(--font-display); font-size: 36px; font-weight: 700; color: var(--gold-dark); line-height: 1; min-width: 40px; }
+.feature-text h4 { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-bright); margin-bottom: 7px; font-family: var(--font-mono); font-weight: 500; }
+.feature-text p { font-size: 11px; color: var(--text-dim); line-height: 1.9; font-weight: 300; }
+.arima-formula { background: var(--surface); border: 2px solid var(--border); border-radius: 6px; padding: 44px; text-align: center; position: relative; }
+.arima-formula::before { content: 'MODEL'; position: absolute; top: -2px; left: 34px; font-size: 8px; letter-spacing: 0.3em; color: var(--bg); background: var(--gold-dark); padding: 3px 12px; font-family: var(--font-mono); }
+.formula-text { font-family: var(--font-serif); font-size: 30px; font-style: italic; color: var(--gold-bright); letter-spacing: 0.05em; margin-bottom: 18px; }
+.formula-desc { font-size: 10px; color: var(--text-muted); letter-spacing: 0.1em; line-height: 2.2; font-family: var(--font-mono); }
+
+/* PRICING CAROUSEL */
+#pricing-section { overflow: hidden; }
+.pricing-carousel-wrapper { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; min-height: 580px; perspective: 1400px; margin-top: 48px; }
+.pricing-track { position: relative; width: 100%; height: 560px; display: flex; align-items: center; justify-content: center; }
+.pricing-card { position: absolute; width: 380px; background: var(--surface); border: 2px solid var(--border-bright); border-radius: 4px; overflow: hidden; transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1); cursor: pointer; user-select: none; }
+.pricing-card[data-state="center"] { transform: translateX(0) scale(1) translateZ(0); z-index: 30; opacity: 1; border-color: var(--gold-dark); box-shadow: 0 0 80px rgba(197,160,89,0.18), 0 32px 80px rgba(0,0,0,0.7), 0 0 0 2px var(--gold-dark); cursor: default; }
+.pricing-card[data-state="left"] { transform: translateX(-320px) scale(0.82) translateZ(-160px) rotateY(12deg); z-index: 10; opacity: 0.45; filter: brightness(0.65); }
+.pricing-card[data-state="right"] { transform: translateX(320px) scale(0.82) translateZ(-160px) rotateY(-12deg); z-index: 10; opacity: 0.45; filter: brightness(0.65); }
+.pricing-card[data-state="far-left"] { transform: translateX(-560px) scale(0.65) translateZ(-300px) rotateY(20deg); z-index: 5; opacity: 0.2; filter: brightness(0.4); }
+.pricing-card[data-state="far-right"] { transform: translateX(560px) scale(0.65) translateZ(-300px) rotateY(-20deg); z-index: 5; opacity: 0.2; filter: brightness(0.4); }
+.pricing-card[data-state="hidden"] { transform: translateX(0) scale(0.5) translateZ(-600px); z-index: 1; opacity: 0; pointer-events: none; }
+.pricing-card[data-state="left"]:hover, .pricing-card[data-state="right"]:hover { opacity: 0.65; filter: brightness(0.8); }
+.pricing-header { padding: 44px 38px 28px; border-bottom: 2px solid var(--border); background: linear-gradient(135deg, var(--surface) 0%, rgba(197,160,89,0.05) 100%); position: relative; }
+.pricing-badge { display: inline-block; padding: 5px 16px; background: var(--gold-dark); color: var(--bg); font-size: 8px; letter-spacing: 0.32em; text-transform: uppercase; border-radius: 2px; margin-bottom: 22px; font-family: var(--font-mono); font-weight: 500; }
+.pricing-badge.featured { background: linear-gradient(135deg, var(--gold-dark), var(--gold-bright)); }
+.pricing-plan-name { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px; }
+.pricing-amount { font-family: var(--font-display); font-size: 84px; font-weight: 900; letter-spacing: -0.02em; line-height: 1; background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold-bright) 60%, var(--gold-dark) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.pricing-period { font-size: 12px; color: var(--text-muted); margin-top: 6px; font-family: var(--font-mono); }
+.pricing-features { padding: 28px 38px; list-style: none; }
+.pricing-feature { display: flex; gap: 14px; padding: 13px 0; border-bottom: 2px solid var(--border); font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); font-weight: 300; }
+.pricing-feature:last-child { border-bottom: none; }
+.pricing-feature::before { content: '→'; color: var(--gold-dark); font-size: 13px; flex-shrink: 0; }
+.pricing-cta { padding: 20px 38px 36px; }
+.pricing-gear-deco { position: absolute; top: -30px; right: -30px; opacity: 0.07; pointer-events: none; }
+.carousel-nav { display: flex; justify-content: center; align-items: center; gap: 24px; margin-top: 36px; position: relative; z-index: 40; }
+.carousel-arrow { width: 48px; height: 48px; border: 2px solid var(--border-bright); border-radius: 2px; background: var(--surface); color: var(--gold); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; font-family: var(--font-mono); }
+.carousel-arrow:hover { background: var(--gold-dark); color: var(--bg); border-color: var(--gold-dark); }
+.carousel-dots { display: flex; gap: 10px; }
+.carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); cursor: pointer; transition: all 0.3s; border: none; padding: 0; }
+.carousel-dot.active { background: var(--gold); width: 24px; border-radius: 3px; }
+
+/* ─── AUTH PAGE ─── */
+#auth-page {
+  background: radial-gradient(ellipse at center, rgba(197,160,89,0.05) 0%, var(--bg) 70%);
+  align-items: center; justify-content: center;
+}
+.auth-card { background: var(--surface); border: 2px solid var(--border-bright); border-radius: 4px; width: 100%; max-width: 460px; position: relative; z-index: 10; overflow: hidden; }
+.auth-top-bar { height: 3px; background: linear-gradient(90deg, var(--gold-dark) 0%, var(--gold-bright) 50%, var(--gold-dark) 100%); }
+.auth-inner { padding: 52px 44px 44px; }
+.auth-tabs { display: flex; margin-bottom: 44px; border-bottom: 2px solid var(--border); }
+.auth-tab { flex: 1; padding: 13px; background: none; border: none; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.3s; font-weight: 500; }
+.auth-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+.auth-title { font-family: var(--font-serif); font-size: 34px; font-style: italic; color: var(--text); margin-bottom: 9px; }
+.auth-sub { font-size: 10px; color: var(--text-muted); letter-spacing: 0.12em; margin-bottom: 34px; font-family: var(--font-mono); }
+.field { position: relative; margin-bottom: 22px; }
+.field label { display: block; font-size: 8px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 9px; font-family: var(--font-mono); font-weight: 500; }
+.field input { width: 100%; background: var(--bg2); border: 2px solid var(--border); border-radius: 2px; padding: 15px 18px; color: var(--text); font-family: var(--font-mono); font-size: 12px; outline: none; transition: border-color 0.3s; }
+.field input:focus { border-color: var(--gold-dark); }
+.field input::placeholder { color: var(--text-muted); font-size: 11px; }
+.auth-form { display: none; }
+.auth-form.active { display: block; }
+.auth-back { display: block; text-align: center; margin-top: 22px; font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-muted); cursor: pointer; background: none; border: none; width: 100%; transition: color 0.3s; font-family: var(--font-mono); }
+.auth-back:hover { color: var(--gold-dark); }
+.divider { position: relative; text-align: center; margin: 26px 0; }
+.divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: var(--border); }
+.divider span { position: relative; background: var(--surface); padding: 0 14px; font-size: 9px; color: var(--text-muted); letter-spacing: 0.22em; font-family: var(--font-mono); }
+
+/* Error/success messages */
+.auth-msg { display: none; padding: 12px 16px; border-radius: 2px; font-size: 10px; letter-spacing: 0.1em; margin-bottom: 18px; font-family: var(--font-mono); }
+.auth-msg.error { display: block; background: rgba(196,114,106,0.12); border: 2px solid rgba(196,114,106,0.4); color: #C4726A; }
+.auth-msg.success { display: block; background: rgba(109,184,122,0.1); border: 2px solid rgba(109,184,122,0.3); color: #6DB87A; }
+
+/* LOGGED IN USER NAV */
+.user-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px; border: 2px solid var(--border-bright); border-radius: 2px;
+  background: var(--surface); font-family: var(--font-mono); font-size: 10px; color: var(--gold);
+  letter-spacing: 0.12em; position: relative; cursor: pointer;
+}
+.user-chip:hover .user-dropdown { display: block; }
+.user-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--gold-dark); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--bg); }
+.user-dropdown {
+  display: none; position: absolute; top: calc(100% + 6px); right: 0;
+  background: var(--surface2); border: 2px solid var(--border-bright); border-radius: 2px;
+  min-width: 180px; z-index: 200;
+}
+.user-dropdown-item { padding: 12px 18px; font-size: 10px; letter-spacing: 0.14em; color: var(--text-dim); cursor: pointer; border-bottom: 1px solid var(--border); text-transform: uppercase; }
+.user-dropdown-item:last-child { border-bottom: none; }
+.user-dropdown-item:hover { background: var(--surface); color: var(--gold); }
+.user-dropdown-item.danger:hover { color: #C4726A; }
+
+/* FOOTER */
+.footer { padding: 44px 52px; border-top: 2px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 10; }
+.footer-copy { font-size: 9px; color: var(--text-muted); letter-spacing: 0.12em; font-family: var(--font-mono); }
+.footer-logo { font-family: var(--font-display); font-size: 24px; font-weight: 900; letter-spacing: 0.14em; background: linear-gradient(135deg, var(--gold-dark), var(--gold-bright)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); backdrop-filter: blur(10px); z-index: 200; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal-inner { position: relative; max-width: 700px; width: 92%; background: var(--surface); border: 2px solid var(--border-bright); border-radius: 4px; overflow: hidden; }
+.modal-inner img { width: 100%; display: block; }
+.modal-close { position: absolute; top: 18px; right: 18px; background: rgba(13,9,5,0.92); border: 2px solid var(--border-bright); color: var(--gold); width: 38px; height: 38px; border-radius: 2px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.modal-close:hover { background: var(--gold); color: var(--bg); }
+
+/* SOLANA PAY MODAL */
+.pay-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); backdrop-filter:blur(12px); z-index:300; align-items:center; justify-content:center; padding:24px; }
+.pay-modal.open { display:flex; }
+.pay-card { background:var(--surface); border:2px solid var(--gold-dark); border-radius:4px; max-width:480px; width:100%; overflow:hidden; position:relative; box-shadow:0 0 80px rgba(197,160,89,0.15), 0 32px 80px rgba(0,0,0,0.7); }
+.pay-card::before { content:''; height:3px; display:block; background:linear-gradient(90deg, var(--gold-dark), var(--gold-bright), var(--gold-dark)); }
+.pay-close { position:absolute; top:16px; right:16px; background:rgba(13,9,5,0.92); border:2px solid var(--border-bright); color:var(--gold); width:34px; height:34px; border-radius:2px; font-size:14px; cursor:pointer; }
+.pay-close:hover { background:var(--gold); color:var(--bg); }
+.pay-inner { padding:36px 34px 30px; }
+.pay-sol-logo { display:flex; align-items:center; gap:10px; margin-bottom:22px; }
+.pay-sol-logo svg { width:28px; height:28px; }
+.pay-sol-name { font-family:var(--font-display); font-size:18px; letter-spacing:0.16em; color:var(--gold-bright); text-transform:uppercase; font-weight:700; }
+.pay-title { font-family:var(--font-serif); font-size:26px; font-style:italic; color:var(--text); margin-bottom:6px; }
+.pay-sub { font-size:10px; color:var(--text-muted); letter-spacing:0.14em; margin-bottom:22px; font-family:var(--font-mono); text-transform:uppercase; }
+.pay-amount-row { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:var(--bg2); border:2px solid var(--border); border-radius:2px; margin-bottom:14px; }
+.pay-amount-label { font-size:9px; letter-spacing:0.22em; text-transform:uppercase; color:var(--text-muted); font-family:var(--font-mono); }
+.pay-amount-val { font-family:var(--font-display); font-size:22px; font-weight:900; color:var(--gold-bright); letter-spacing:0.03em; }
+.pay-amount-val small { font-size:11px; color:var(--text-dim); margin-left:6px; letter-spacing:0.1em; }
+.pay-addr-box { background:var(--bg2); border:2px solid var(--border); border-radius:2px; padding:14px 16px; margin-bottom:16px; }
+.pay-addr-lbl { font-size:8px; letter-spacing:0.28em; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; font-family:var(--font-mono); }
+.pay-addr-val { font-family:var(--font-mono); font-size:11px; color:var(--gold-bright); word-break:break-all; line-height:1.6; }
+.pay-qr { display:flex; justify-content:center; margin:18px 0 22px; }
+.pay-qr img { width:170px; height:170px; border:2px solid var(--gold-dark); border-radius:4px; background:#fff; padding:8px; }
+.pay-actions { display:flex; gap:10px; }
+.pay-actions .btn-primary, .pay-actions .btn-ghost { flex:1; padding:13px; font-size:9px; }
+.pay-note { font-size:9px; color:var(--text-muted); letter-spacing:0.08em; margin-top:16px; line-height:1.8; font-family:var(--font-mono); text-align:center; }
+
+/* SUCCESS STATE */
+.pay-success-icon { width:74px; height:74px; margin:6px auto 18px; border:3px solid #6DB87A; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:38px; color:#6DB87A; background:rgba(109,184,122,0.08); box-shadow:0 0 48px rgba(109,184,122,0.18); }
+.pay-access-card { background:var(--bg2); border:2px solid var(--gold-dark); border-radius:4px; padding:22px 20px; margin:22px 0 18px; }
+.pay-access-label { font-size:8px; letter-spacing:0.28em; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px; font-family:var(--font-mono); }
+.pay-access-plan { font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--gold-bright); letter-spacing:0.06em; margin-bottom:18px; text-transform:uppercase; }
+.pay-access-bot { display:flex; align-items:center; gap:14px; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:3px; margin-bottom:16px; }
+.pay-access-bot .tg-icon { width:42px; height:42px; flex-shrink:0; }
+.pay-access-bot .tg-icon svg { width:100%; height:100%; display:block; }
+.pay-access-bot-name { font-family:var(--font-mono); font-size:15px; color:#37BBFE; font-weight:600; letter-spacing:0.04em; }
+.pay-access-bot-sub { font-size:10px; color:var(--text-dim); letter-spacing:0.1em; font-family:var(--font-mono); margin-top:3px; }
+.pay-access-btn { display:block; width:100%; padding:16px; text-align:center; text-decoration:none; background:linear-gradient(135deg,#37BBFE 0%,#0088CC 60%,#007DBB 100%) !important; color:#fff !important; letter-spacing:0.2em; }
+.pay-access-btn:hover { box-shadow:0 8px 48px rgba(55,187,254,0.35); transform:translateY(-2px); }
+
+/* TOAST */
+.toast { position: fixed; bottom: 36px; right: 36px; z-index: 999; padding: 18px 26px; background: var(--surface2); border: 2px solid var(--gold-dark); border-radius: 4px; font-size: 11px; color: var(--gold-bright); letter-spacing: 0.06em; transform: translateY(80px); opacity: 0; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); font-family: var(--font-mono); }
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ORNAMENT */
+.ornament { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 28px 0; }
+.ornament-line { flex: 1; height: 2px; background: linear-gradient(90deg, transparent, var(--border-bright)); }
+.ornament-line:last-child { transform: scaleX(-1); }
+.ornament-icon { color: var(--gold-dark); font-size: 18px; }
+
+#main-page { min-height: 100vh; scroll-snap-align: start; scroll-snap-stop: always; }
+</style>
+</head>
+<body>
+
+<canvas id="gear-canvas"></canvas>
+
+<nav class="nav" id="main-nav">
+  <div class="nav-logo" onclick="showSection('home-wrapper')">MIDAS</div>
+  <ul class="nav-links">
+    <li><button onclick="scrollToSection('metrics-section')" data-i18n="nav.metrics">Метрики</button></li>
+    <li><button onclick="scrollToSection('method-section')" data-i18n="nav.methodology">Методологія</button></li>
+    <li><button onclick="scrollToSection('hall-section')" data-i18n="nav.hall">Зал Слави</button></li>
+    <li><button onclick="scrollToSection('pricing-section')" data-i18n="nav.pricing">Підписка</button></li>
+  </ul>
+  <div class="nav-right">
+    <!-- Mode Toggle (XAU / BTC) -->
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="mode-xau" onclick="setMode('xau')">
+        <span class="mode-icon xau"></span>XAU
+      </button>
+      <button class="mode-btn" id="mode-btc" onclick="setMode('btc')">
+        <span class="mode-icon btc"></span>BTC
+      </button>
+    </div>
+
+    <!-- Language Toggle -->
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btn-uk" onclick="setLang('uk')">
+        <span class="flag-ua"></span>UA
+      </button>
+      <button class="lang-btn" id="btn-en" onclick="setLang('en')">
+        <span class="flag-en"></span>EN
+      </button>
+    </div>
+
+    <!-- Auth button or user chip -->
+    <div id="nav-auth-btn">
+      <button class="nav-btn" onclick="showSection('auth-page')" data-i18n="nav.login">Увійти / Реєстрація</button>
+    </div>
+    <div id="nav-user-chip" style="display:none">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar-init">V</div>
+        <span id="user-nav-name">Trader</span>
+        <div class="user-dropdown">
+          <div class="user-dropdown-item" data-i18n="nav.profile">Профіль</div>
+          <div class="user-dropdown-item" onclick="scrollToSection('pricing-section')" data-i18n="nav.subscription">Підписка</div>
+          <div class="user-dropdown-item danger" onclick="logout()" data-i18n="nav.logout">Вийти</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- HOME WRAPPER -->
+<div id="home-wrapper" class="active">
+
+  <!-- HERO -->
+  <div class="snap-section" id="hero-snap" style="position:relative">
+    <!-- COIN BEHIND HERO (swappable) -->
+    <div class="hero-coin idle" id="hero-coin">
+      <!-- XAU coin -->
+      <svg id="coin-xau" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="xauG" cx="35%" cy="30%" r="75%">
+            <stop offset="0%"  stop-color="#FFE9A8"/>
+            <stop offset="45%" stop-color="#C5A059"/>
+            <stop offset="100%" stop-color="#5A3E10"/>
+          </radialGradient>
+          <radialGradient id="xauG2" cx="50%" cy="50%" r="50%">
+            <stop offset="85%" stop-color="transparent"/>
+            <stop offset="100%" stop-color="#2A1C08"/>
+          </radialGradient>
+        </defs>
+        <circle cx="200" cy="200" r="190" fill="url(#xauG)"/>
+        <circle cx="200" cy="200" r="190" fill="url(#xauG2)"/>
+        <circle cx="200" cy="200" r="178" fill="none" stroke="#8A6830" stroke-width="2"/>
+        <circle cx="200" cy="200" r="160" fill="none" stroke="#E8D5A3" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>
+        <!-- Au symbol -->
+        <text x="200" y="235" text-anchor="middle" fill="#3A2810" font-family="Barlow Condensed, sans-serif" font-weight="900" font-size="160" letter-spacing="-4">Au</text>
+        <text x="200" y="285" text-anchor="middle" fill="#6B4E1A" font-family="monospace" font-size="18" letter-spacing="10">XAU/USD</text>
+        <text x="200" y="105" text-anchor="middle" fill="#6B4E1A" font-family="monospace" font-size="14" letter-spacing="8">MIDAS</text>
+      </svg>
+      <!-- BTC coin -->
+      <svg id="coin-btc" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" style="display:none">
+        <defs>
+          <radialGradient id="btcG" cx="35%" cy="30%" r="75%">
+            <stop offset="0%"  stop-color="#FFCB7A"/>
+            <stop offset="45%" stop-color="#F7931A"/>
+            <stop offset="100%" stop-color="#5A2E00"/>
+          </radialGradient>
+          <radialGradient id="btcG2" cx="50%" cy="50%" r="50%">
+            <stop offset="85%" stop-color="transparent"/>
+            <stop offset="100%" stop-color="#200E00"/>
+          </radialGradient>
+        </defs>
+        <circle cx="200" cy="200" r="190" fill="url(#btcG)"/>
+        <circle cx="200" cy="200" r="190" fill="url(#btcG2)"/>
+        <circle cx="200" cy="200" r="178" fill="none" stroke="#8A4E00" stroke-width="2"/>
+        <circle cx="200" cy="200" r="160" fill="none" stroke="#FFB84D" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>
+        <text x="200" y="275" text-anchor="middle" fill="#3A1C00" font-family="Barlow Condensed, sans-serif" font-weight="900" font-size="260" letter-spacing="-4">₿</text>
+        <text x="200" y="335" text-anchor="middle" fill="#6B3E00" font-family="monospace" font-size="16" letter-spacing="8">BTC/USDT</text>
+        <text x="200" y="85" text-anchor="middle" fill="#6B3E00" font-family="monospace" font-size="14" letter-spacing="8">MIDAS</text>
+      </svg>
+    </div>
+    <div class="home-content">
+      <div class="eyebrow" data-i18n="hero.eyebrow">Дипломний Проект · 2025</div>
+      <h1 class="hero-title">
+        MIDAS
+        <em data-i18n="hero.subtitle">Алхімія Прогнозів</em>
+      </h1>
+      <p class="hero-sub" data-i18n="hero.desc">
+        Математична точність моделі ARIMA, інтегрована в алгоритм аналізу ринку дорогоцінних металів. Ми перетворюємо шум даних на чіткий сигнал.
+      </p>
+      <div class="cta-group">
+        <button class="btn-primary" onclick="handleLaunchClick()" data-i18n="hero.cta_primary">Запустити Механізм</button>
+        <button class="btn-ghost" onclick="scrollDown()" data-i18n="hero.cta_secondary">Переглянути Аналітику</button>
+      </div>
+    </div>
+    <div class="scroll-hint" data-i18n="hero.scroll">Гортати вниз</div>
+  </div>
+
+  <!-- QUICK STATS -->
+  <div class="snap-section" style="background:linear-gradient(180deg,rgba(13,9,5,0) 0%,rgba(19,12,6,0.65) 100%)">
+    <div class="container" style="position:relative;z-index:10">
+      <div class="section-label" data-i18n="stats.label">Результати Бектесту</div>
+      <div class="section-title"><span data-i18n="stats.title">Цифри, які</span> <em data-i18n="stats.title_em">не брешуть</em></div>
+      <div class="kpi-grid" id="kpi-grid-dynamic"></div>
+      <div style="text-align:center">
+        <button class="btn-ghost" onclick="scrollToSection('metrics-section')" data-i18n="stats.btn">Детальна Аналітика →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- METHODOLOGY SNAP -->
+  <div class="snap-section">
+    <div class="container" style="position:relative;z-index:10;padding:0 52px">
+      <div class="method-grid">
+        <div>
+          <div class="section-label" data-i18n="method.label">Технологія</div>
+          <div class="section-title">ARIMA<br><em data-i18n="method.subtitle">в кожній ітерації</em></div>
+          <ul class="feature-list">
+            <li class="feature-item"><span class="feature-num">01</span><div class="feature-text"><h4 data-i18n="method.f1_title">Автодекомпозиція Тренду</h4><p data-i18n="method.f1_desc">Виокремлення сезонної, трендової та залишкової компоненти часового ряду цін на золото.</p></div></li>
+            <li class="feature-item"><span class="feature-num">02</span><div class="feature-text"><h4 data-i18n="method.f2_title">Очищення від Шуму</h4><p data-i18n="method.f2_desc">Диференціювання ряду до стаціонарного стану з перевіркою за тестом Дікі-Фуллера.</p></div></li>
+            <li class="feature-item"><span class="feature-num">03</span><div class="feature-text"><h4 data-i18n="method.f3_title">Генерація Сигналів</h4><p data-i18n="method.f3_desc">Компаратор прогнозу та поточної ціни з порогом K≥0.4 формує BUY/SELL/SKIP.</p></div></li>
+          </ul>
+        </div>
+        <div>
+          <div class="arima-formula" style="margin-bottom:26px">
+            <div class="formula-text">ARIMA(p, d, q)</div>
+            <div class="formula-desc">
+              p — <span data-i18n="formula.p">порядок авторегресії</span><br>
+              d — <span data-i18n="formula.d">ступінь інтегрованості</span><br>
+              q — <span data-i18n="formula.q">порядок ковзного середнього</span><br><br>
+              <span style="color:var(--gold-dark)">Yt = c + φ₁Yₜ₋₁ + θ₁εₜ₋₁ + εₜ</span>
+            </div>
+          </div>
+          <div class="chart-panel">
+            <div class="chart-header">
+              <span class="chart-title">Equity vs Buy&Hold</span>
+              <span class="chart-meta">2025.11 — 2026.03</span>
+            </div>
+            <div style="padding:18px">
+              <svg class="sparkline" viewBox="0 0 400 100" preserveAspectRatio="none">
+                <polyline points="0,80 40,60 80,40 120,20 160,15 200,12 240,18 280,22 320,18 360,20 400,25" fill="none" stroke="#C5A059" stroke-width="2.5" stroke-opacity="0.6"/>
+                <polyline points="0,75 40,78 80,72 120,65 160,58 200,50 240,45 280,48 320,44 360,42 400,40" fill="none" stroke="#7EB8D4" stroke-width="2.5"/>
+                <polyline points="0,100 0,75 40,78 80,72 120,65 160,58 200,50 240,45 280,48 320,44 360,42 400,40 400,100" fill="rgba(126,184,212,0.09)" stroke="none"/>
+                <text x="4" y="14" fill="#C5A059" font-size="9" font-family="monospace">B&H</text>
+                <text x="4" y="36" fill="#7EB8D4" font-size="9" font-family="monospace">MIDAS</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN SCROLLABLE CONTENT -->
+  <div id="main-page" style="min-height:100vh;scroll-snap-align:start;scroll-snap-stop:always;">
+
+    <!-- METRICS DEEP DIVE -->
+    <section class="section" id="metrics-section" style="background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);flex-direction:column;align-items:flex-start">
+      <div class="container">
+        <div class="section-label" data-i18n="metrics.label">Глибокий Аналіз</div>
+        <div class="section-title"><span data-i18n="metrics.title">Аналітичний</span> <em data-i18n="metrics.title_em">Звіт Бектесту</em></div>
+        <div id="charts-dynamic"></div>
+        <div class="chart-panel">
+          <div class="chart-header"><span class="chart-title" data-i18n="table.title">Зведена Таблиця Метрик</span><span class="chart-meta" data-i18n="table.sub">Повний звіт бектесту</span></div>
+          <div style="overflow-x:auto">
+            <table class="stats-table">
+              <thead><tr><th data-i18n="table.metric">Метрика</th><th data-i18n="table.value">Значення</th><th data-i18n="table.strategy">Стратегія</th><th>Buy & Hold</th><th data-i18n="table.grade">Оцінка</th></tr></thead>
+              <tbody id="table-dynamic">
+                <tr><td data-i18n="table.r1">Загальна кількість угод</td><td class="val">363</td><td>ARIMA v2 tuned</td><td>—</td><td style="color:var(--text-dim)" data-i18n="table.active">Активна</td></tr>
+                <tr><td data-i18n="table.r2">Win Rate</td><td class="val pos">54.3%</td><td>197 / 363</td><td>—</td><td class="pos">↑ <span data-i18n="table.pos">Позитив</span></td></tr>
+                <tr><td data-i18n="table.r3">Total PnL</td><td class="val pos">+22.78%</td><td>Avg +0.063% / угоду</td><td>+14.5%</td><td class="pos">↑ <span data-i18n="table.better">Краще</span></td></tr>
+                <tr><td data-i18n="table.r4">Profit Factor</td><td class="val pos">1.26</td><td data-i18n="table.filtered">Стабільно прибутковий</td><td>—</td><td class="pos">↑ <span data-i18n="table.pos">Позитив</span></td></tr>
+                <tr><td data-i18n="table.r5">BUY угоди</td><td class="val pos">336</td><td>WR 55.7% · +37.78%</td><td>—</td><td class="pos">↑ <span data-i18n="table.better">Сильно</span></td></tr>
+                <tr><td data-i18n="table.r6">SELL угоди</td><td class="val neg">27</td><td>WR 37.0% · -15.00%</td><td>—</td><td class="neg">↓ <span data-i18n="table.risk">Слабко</span></td></tr>
+                <tr><td data-i18n="table.r7">Сигналів відфільтровано</td><td class="val">1,670</td><td>Choppy / ATR / Trend</td><td>—</td><td class="pos">↑ <span data-i18n="table.potential">Quality</span></td></tr>
+                <tr><td data-i18n="table.r8">Choppy filter (ER&lt;0.20)</td><td class="val">699</td><td data-i18n="table.filtered">Kaufman ER</td><td>—</td><td style="color:var(--text-dim)" data-i18n="table.ok">Основний</td></tr>
+                <tr><td data-i18n="table.r9">ATR weak forecast</td><td class="val">604</td><td>ATR × 0.15</td><td>—</td><td style="color:var(--text-dim)" data-i18n="table.norm">Норма</td></tr>
+                <tr><td data-i18n="table.r10">Тестовий період</td><td class="val">6614h</td><td>2025-04 → 2026-04 (H1)</td><td>—</td><td style="color:var(--text-dim)" data-i18n="table.stat">Статистично</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ornament" style="padding:0 52px;position:relative;z-index:10"><div class="ornament-line"></div><div class="ornament-icon">⚙</div><div class="ornament-line"></div></div>
+
+    <!-- HALL OF FAME -->
+    <section class="section" id="hall-section" style="flex-direction:column;align-items:flex-start">
+      <div class="container">
+        <div class="section-label" data-i18n="hall.label">Досягнення Трейдера</div>
+        <div class="section-title"><span data-i18n="hall.title">Зал</span> <em data-i18n="hall.title_em">Слави</em></div>
+        <p style="font-size:12px;color:var(--text-dim);max-width:540px;line-height:2;margin-bottom:0;font-family:var(--font-mono);font-weight:300" data-i18n="hall.desc">Сертифікати пройдених оцінювальних програм провідних проп-трейдингових компаній.</p>
+        <div class="hof-grid">
+          <div class="cert-card" onclick="openModal('modal-ftmo')">
+            <span class="cert-badge">Stage 1 Passed</span>
+            <div class="cert-img-wrap"><img src="IMAGE_2026-03-27_17_04_24.jpg" alt="FTMO"></div>
+            <div class="cert-info"><div class="cert-org">FTMO · Prop Trading</div><div class="cert-name">FTMO Challenge Passed</div><div class="cert-date">27 <span data-i18n="months.dec">Грудня</span> 2025 · Volodymyr B.</div><div class="cert-verify" data-i18n="cert.verified">Верифіковано · Otakar Suffner CEO</div></div>
+          </div>
+          <div class="cert-card" onclick="openModal('modal-5ers')">
+            <span class="cert-badge">Funded</span>
+            <div class="cert-img-wrap"><img src="IMAGE_2026-03-27_17_04_56.jpg" alt="The5ers"></div>
+            <div class="cert-info"><div class="cert-org">The5%ers · Prop Trading</div><div class="cert-name" data-i18n="cert.5ers">Funded Certificate Отримано</div><div class="cert-date">26 <span data-i18n="months.feb">Лютого</span> 2026 · Volodymyr Bobal</div><div class="cert-verify" data-i18n="cert.verified2">Верифіковано · Saul Lokier CEO</div></div>
+          </div>
+          <div class="cert-card" style="cursor:default">
+            <div style="padding:34px;height:270px;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(135deg,var(--surface) 0%,rgba(197,160,89,0.05) 100%)">
+              <div style="font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:var(--gold-dark);margin-bottom:26px;font-family:var(--font-mono)" data-i18n="stats_card.label">Статистика Досягнень</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+                <div><div style="font-family:var(--font-display);font-size:52px;font-weight:900;color:var(--gold-bright);line-height:1">2</div><div style="font-size:9px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-top:5px;font-family:var(--font-mono)">Prop Firms</div></div>
+                <div><div style="font-family:var(--font-display);font-size:52px;font-weight:900;color:var(--gold-bright);line-height:1">100%</div><div style="font-size:9px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-top:5px;font-family:var(--font-mono)">Pass Rate</div></div>
+                <div><div style="font-family:var(--font-display);font-size:52px;font-weight:900;color:var(--gold-bright);line-height:1">3M</div><div style="font-size:9px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-top:5px;font-family:var(--font-mono)" data-i18n="stats_card.record">Трек Рекорд</div></div>
+                <div><div style="font-family:var(--font-display);font-size:52px;font-weight:900;color:#6DB87A;line-height:1">↑</div><div style="font-size:9px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-top:5px;font-family:var(--font-mono)">Funded Live</div></div>
+              </div>
+            </div>
+            <div class="cert-info"><div class="cert-org">MIDAS · <span data-i18n="stats_card.record">Трек Рекорд</span></div><div class="cert-name" data-i18n="stats_card.name">Підтверджені Результати</div><div class="cert-date">2025 — 2026 · <span data-i18n="stats_card.active">Активний Трейдинг</span></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ornament" style="padding:0 52px;position:relative;z-index:10"><div class="ornament-line"></div><div class="ornament-icon">◆</div><div class="ornament-line"></div></div>
+
+    <!-- METHODOLOGY DEEP -->
+    <section class="section" id="method-section" style="flex-direction:column;align-items:flex-start">
+      <div class="container">
+        <div class="section-label" data-i18n="arch.label">Як це Працює</div>
+        <div class="section-title"><span data-i18n="arch.title">Технічна</span> <em data-i18n="arch.title_em">Архітектура</em></div>
+        <div class="method-grid">
+          <ul class="feature-list">
+            <li class="feature-item"><span class="feature-num">01</span><div class="feature-text"><h4 data-i18n="arch.s1_title">Збір та Нормалізація Даних</h4><p data-i18n="arch.s1_desc">Отримання OHLCV даних по XAU/USD з частотою 5-хвилинних свічок. Нормалізація, обробка пропусків.</p></div></li>
+            <li class="feature-item"><span class="feature-num">02</span><div class="feature-text"><h4 data-i18n="arch.s2_title">ADF-тест на Стаціонарність</h4><p data-i18n="arch.s2_desc">Перевірка часового ряду тестом Augmented Dickey-Fuller. Диференціювання до стаціонарного стану d=1 або d=2.</p></div></li>
+            <li class="feature-item"><span class="feature-num">03</span><div class="feature-text"><h4 data-i18n="arch.s3_title">Вибір параметрів (p, d, q)</h4><p data-i18n="arch.s3_desc">ACF/PACF аналіз для визначення лагів. Auto-ARIMA для автоматичного підбору з мінімізацією AIC/BIC.</p></div></li>
+            <li class="feature-item"><span class="feature-num">04</span><div class="feature-text"><h4 data-i18n="arch.s4_title">Генерація Торгових Сигналів</h4><p data-i18n="arch.s4_desc">Порівняння прогнозованої ціни з поточною. При |Δ| ≥ K=0.4% — генерується сигнал BUY або SELL.</p></div></li>
+            <li class="feature-item"><span class="feature-num">05</span><div class="feature-text"><h4 data-i18n="arch.s5_title">Управління Ризиками</h4><p data-i18n="arch.s5_desc">Жорсткий Stop Loss -1% та Take Profit +3%. Коефіцієнт ризик/прибуток 1:3 забезпечує позитивне матсподівання.</p></div></li>
+          </ul>
+          <div>
+            <div class="arima-formula" style="margin-bottom:26px">
+              <div class="formula-text">ARIMA(p, d, q)</div>
+              <div class="formula-desc">
+                <span data-i18n="arch.full_model">Повна модель з MA та AR компонентами</span>:<br><br>
+                <span style="color:var(--gold)">φ(B)·∇ᵈYₜ = θ(B)·εₜ</span><br><br>
+                <span data-i18n="arch.where">де B — оператор зсуву,<br>∇ᵈ — різниця d-го порядку,<br>φ — AR поліном порядку p,<br>θ — MA поліном порядку q</span>
+              </div>
+            </div>
+            <div class="chart-panel">
+              <div class="chart-header"><span class="chart-title" data-i18n="arch.dist">Розподіл Прибутковості Угод</span><span class="chart-meta">Mean ≈ 0%</span></div>
+              <div class="bar-chart">
+                <div class="bar" style="height:8%;background:rgba(196,114,106,0.6)" data-tip="-2.5%: 3"></div>
+                <div class="bar" style="height:15%;background:rgba(196,114,106,0.6)" data-tip="-2%: 6"></div>
+                <div class="bar" style="height:30%;background:rgba(196,114,106,0.5)" data-tip="-1.5%: 12"></div>
+                <div class="bar" style="height:55%;background:rgba(197,160,89,0.5)" data-tip="-1%: 44 (SL)"></div>
+                <div class="bar" style="height:100%;background:rgba(197,160,89,0.9)" data-tip="0%: 109 (max)"></div>
+                <div class="bar" style="height:45%;background:rgba(109,184,122,0.5)" data-tip="+0.5%: 30"></div>
+                <div class="bar" style="height:25%;background:rgba(109,184,122,0.5)" data-tip="+1%: 18"></div>
+                <div class="bar" style="height:18%;background:rgba(109,184,122,0.6)" data-tip="+2%: 8"></div>
+                <div class="bar" style="height:12%;background:rgba(109,184,122,0.7)" data-tip="+3%: 13 (TP)"></div>
+                <div class="bar" style="height:6%;background:rgba(109,184,122,0.7)" data-tip="+4%: 4"></div>
+                <div class="bar" style="height:3%;background:rgba(109,184,122,0.8)" data-tip="+6%: 1"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRICING CAROUSEL -->
+    <section class="section" id="pricing-section" style="flex-direction:column;overflow:hidden">
+      <div class="container" style="display:flex;flex-direction:column;align-items:center">
+        <div class="section-label" style="justify-content:center" data-i18n="pricing.label">Доступ до Системи</div>
+        <div class="section-title" style="text-align:center"><span data-i18n="pricing.title">Золоті</span> <em data-i18n="pricing.title_em">Сигнали</em></div>
+        <div class="pricing-carousel-wrapper">
+          <div class="pricing-track" id="pricing-track">
+            <div class="pricing-card" data-index="0">
+              <svg class="pricing-gear-deco" width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#C5A059" stroke-width="1.5"/><circle cx="60" cy="60" r="30" fill="none" stroke="#C5A059" stroke-width="1"/><circle cx="60" cy="60" r="8" fill="none" stroke="#C5A059" stroke-width="1.5"/></svg>
+              <div class="pricing-header">
+                <div class="pricing-badge">Starter</div>
+                <div class="pricing-plan-name" data-i18n="pricing.basic">Базовий</div>
+                <div class="pricing-amount">$5</div>
+                <div class="pricing-period" data-i18n="pricing.per_month">на місяць · автопоновлення</div>
+              </div>
+              <ul class="pricing-features">
+                <li class="pricing-feature" data-i18n="pricing.f1_1">Щоденні сигнали BUY/SELL</li>
+                <li class="pricing-feature" data-i18n="pricing.f1_2">Telegram сповіщення</li>
+                <li class="pricing-feature" data-i18n="pricing.f1_3">Тижневий звіт XAU/USD</li>
+                <li class="pricing-feature" data-i18n="pricing.f1_4">Доступ до Discord каналу</li>
+              </ul>
+              <div class="pricing-cta"><button class="btn-ghost" style="width:100%;padding:16px" onclick="openPayModal('basic')" data-i18n="pricing.choose">Обрати план</button></div>
+            </div>
+            <div class="pricing-card" data-index="1">
+              <svg class="pricing-gear-deco" width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#C5A059" stroke-width="1.5"/><circle cx="60" cy="60" r="30" fill="none" stroke="#C5A059" stroke-width="1"/><circle cx="60" cy="60" r="8" fill="none" stroke="#C5A059" stroke-width="1.5"/></svg>
+              <div class="pricing-header">
+                <div class="pricing-badge featured">Priority Access</div>
+                <div class="pricing-plan-name" data-i18n="pricing.pro">Професійний</div>
+                <div class="pricing-amount">$10</div>
+                <div class="pricing-period" data-i18n="pricing.per_month">на місяць · автопоновлення</div>
+              </div>
+              <ul class="pricing-features">
+                <li class="pricing-feature" data-i18n="pricing.f2_1">Доступ до API прогнозів у реальному часі</li>
+                <li class="pricing-feature" data-i18n="pricing.f2_2">Telegram сповіщення з BUY/SELL/SKIP</li>
+                <li class="pricing-feature" data-i18n="pricing.f2_3">Щоденний аналітичний звіт по XAU/USD</li>
+                <li class="pricing-feature" data-i18n="pricing.f2_4">Повна статистика бектесту за весь період</li>
+                <li class="pricing-feature" data-i18n="pricing.f2_5">Monte Carlo аналіз вашого портфеля</li>
+                <li class="pricing-feature" data-i18n="pricing.f2_6">Доступ до закритого Discord каналу</li>
+              </ul>
+              <div class="pricing-cta"><button class="btn-primary" style="width:100%;padding:18px" onclick="openPayModal('pro')" data-i18n="pricing.subscribe">Оформити Підписку</button></div>
+            </div>
+            <div class="pricing-card" data-index="2">
+              <svg class="pricing-gear-deco" width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#C5A059" stroke-width="1.5"/><circle cx="60" cy="60" r="30" fill="none" stroke="#C5A059" stroke-width="1"/><circle cx="60" cy="60" r="8" fill="none" stroke="#C5A059" stroke-width="1.5"/></svg>
+              <div class="pricing-header">
+                <div class="pricing-badge">Elite</div>
+                <div class="pricing-plan-name" data-i18n="pricing.elite">Елітний</div>
+                <div class="pricing-amount">$15</div>
+                <div class="pricing-period" data-i18n="pricing.elite_period">на місяць · персональний менеджер</div>
+              </div>
+              <ul class="pricing-features">
+                <li class="pricing-feature" data-i18n="pricing.f3_1">Все з Про плану</li>
+                <li class="pricing-feature" data-i18n="pricing.f3_2">Персональний менеджер рахунку</li>
+                <li class="pricing-feature" data-i18n="pricing.f3_3">Налаштування параметрів K під ваш стиль</li>
+                <li class="pricing-feature" data-i18n="pricing.f3_4">Прямий доступ до розробника</li>
+                <li class="pricing-feature" data-i18n="pricing.f3_5">Пріоритетна підтримка 24/7</li>
+                <li class="pricing-feature" data-i18n="pricing.f3_6">Щомісячний дзвінок-звіт 1-на-1</li>
+              </ul>
+              <div class="pricing-cta"><button class="btn-ghost" style="width:100%;padding:16px" onclick="openPayModal('elite')" data-i18n="pricing.contact">Обрати Elite</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="carousel-nav">
+          <button class="carousel-arrow" onclick="moveCarousel(-1)">‹</button>
+          <div class="carousel-dots" id="carousel-dots">
+            <button class="carousel-dot" onclick="goToSlide(0)"></button>
+            <button class="carousel-dot active" onclick="goToSlide(1)"></button>
+            <button class="carousel-dot" onclick="goToSlide(2)"></button>
+          </div>
+          <button class="carousel-arrow" onclick="moveCarousel(1)">›</button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer" style="position:relative;z-index:10">
+      <div class="footer-copy">© 2025–2026 MIDAS · <span data-i18n="footer.thesis">Дипломний Проект</span> · Volodymyr Bobal</div>
+      <div class="footer-logo">MIDAS</div>
+    </footer>
+  </div>
+</div>
+
+<!-- AUTH PAGE -->
+<div id="auth-page" class="page" style="justify-content:center">
+  <div class="auth-card" style="position:relative;z-index:10">
+    <div class="auth-top-bar"></div>
+    <div class="auth-inner">
+      <div style="text-align:center;margin-bottom:30px">
+        <div class="nav-logo" style="font-size:28px">MIDAS</div>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchTab('login')" data-i18n="auth.login">Вхід</button>
+        <button class="auth-tab" onclick="switchTab('register')" data-i18n="auth.register">Реєстрація</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <div id="form-login" class="auth-form active">
+        <div class="auth-title" data-i18n="auth.login_title">Вхід до Кабінету</div>
+        <div class="auth-sub" data-i18n="auth.login_sub">Авторизація в системі MIDAS</div>
+        <div id="login-msg" class="auth-msg"></div>
+        <div class="field"><label data-i18n="auth.email">Email адреса</label><input type="email" id="login-email" placeholder="trader@midas.gold"></div>
+        <div class="field"><label data-i18n="auth.password">Пароль</label><input type="password" id="login-password" placeholder="••••••••••"></div>
+        <button class="btn-primary" style="width:100%;padding:17px;margin-top:8px" onclick="doLogin()" data-i18n="auth.login_btn">Увійти в механізм</button>
+        <div class="divider"><span data-i18n="auth.or">або</span></div>
+        <p style="text-align:center;font-size:10px;color:var(--text-muted);font-family:var(--font-mono)"><span data-i18n="auth.no_account">Немає акаунту?</span> <button onclick="switchTab('register')" style="background:none;border:none;color:var(--gold-dark);cursor:pointer;font-family:inherit;font-size:10px;letter-spacing:0.05em" data-i18n="auth.go_register">Зареєструватися →</button></p>
+      </div>
+
+      <!-- REGISTER FORM -->
+      <div id="form-register" class="auth-form">
+        <div class="auth-title" data-i18n="auth.reg_title">Реєстрація</div>
+        <div class="auth-sub" data-i18n="auth.reg_sub">Створіть акаунт у системі MIDAS</div>
+        <div id="reg-msg" class="auth-msg"></div>
+        <div class="field"><label data-i18n="auth.fullname">Повне ім'я</label><input type="text" id="reg-name" placeholder="Ім'я Прізвище"></div>
+        <div class="field"><label data-i18n="auth.email">Email адреса</label><input type="email" id="reg-email" placeholder="trader@midas.gold"></div>
+        <div class="field"><label data-i18n="auth.password">Пароль</label><input type="password" id="reg-password" placeholder="Мінімум 8 символів"></div>
+        <div class="field"><label data-i18n="auth.confirm_password">Підтвердити пароль</label><input type="password" id="reg-password2" placeholder="Повторіть пароль"></div>
+        <button class="btn-primary" style="width:100%;padding:17px;margin-top:8px" onclick="doRegister()" data-i18n="auth.reg_btn">Створити Акаунт</button>
+        <div class="divider"><span data-i18n="auth.or">або</span></div>
+        <p style="text-align:center;font-size:10px;color:var(--text-muted);font-family:var(--font-mono)"><span data-i18n="auth.have_account">Вже маєте акаунт?</span> <button onclick="switchTab('login')" style="background:none;border:none;color:var(--gold-dark);cursor:pointer;font-family:inherit;font-size:10px;letter-spacing:0.05em" data-i18n="auth.go_login">Увійти →</button></p>
+      </div>
+
+      <button class="auth-back" onclick="showSection('home-wrapper')" data-i18n="auth.back">← Повернутися на головну</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-ftmo" onclick="closeModal('modal-ftmo')">
+  <div class="modal-inner" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModal('modal-ftmo')">✕</button>
+    <img src="IMAGE_2026-03-27_17_04_24.jpg" alt="FTMO Certificate">
+    <div style="padding:22px 26px;background:var(--surface);border-top:2px solid var(--border)">
+      <div style="font-size:9px;letter-spacing:0.28em;text-transform:uppercase;color:var(--gold-dark);margin-bottom:5px;font-family:var(--font-mono)">FTMO · 27 December 2025</div>
+      <div style="font-family:var(--font-serif);font-size:20px;color:var(--text)">Passed FTMO Challenge — Stage 1 · Volodymyr B.</div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-5ers" onclick="closeModal('modal-5ers')">
+  <div class="modal-inner" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModal('modal-5ers')">✕</button>
+    <img src="IMAGE_2026-03-27_17_04_56.jpg" alt="The5ers Certificate">
+    <div style="padding:22px 26px;background:var(--surface);border-top:2px solid var(--border)">
+      <div style="font-size:9px;letter-spacing:0.28em;text-transform:uppercase;color:var(--gold-dark);margin-bottom:5px;font-family:var(--font-mono)">The5%ers · 26 February 2026</div>
+      <div style="font-family:var(--font-serif);font-size:20px;color:var(--text)">Funded Certificate · Volodymyr Bobal</div>
+    </div>
+  </div>
+</div>
+
+<!-- SOLANA PAY MODAL -->
+<div class="pay-modal" id="pay-modal" onclick="closePayModal(event)">
+  <div class="pay-card" onclick="event.stopPropagation()">
+    <button class="pay-close" onclick="closePayModal()">✕</button>
+    <div class="pay-inner">
+      <div class="pay-sol-logo">
+        <svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="solG1" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0" stop-color="#9945FF"/><stop offset="1" stop-color="#14F195"/>
+            </linearGradient>
+          </defs>
+          <path d="M26 90 L98 90 L110 104 L38 104 Z" fill="url(#solG1)"/>
+          <path d="M26 58 L98 58 L110 72 L38 72 Z" fill="url(#solG1)" opacity="0.85"/>
+          <path d="M26 26 L98 26 L110 40 L38 40 Z" fill="url(#solG1)" opacity="0.7"/>
+        </svg>
+        <div class="pay-sol-name">Solana Pay</div>
+      </div>
+      <div class="pay-title" data-i18n="pay.title">Оплата підписки</div>
+      <div class="pay-sub" data-i18n="pay.sub">Переведіть SOL на вказану адресу</div>
+
+      <div class="pay-amount-row">
+        <span class="pay-amount-label" data-i18n="pay.plan">План</span>
+        <span class="pay-amount-val" id="pay-plan-name">—</span>
+      </div>
+      <div class="pay-amount-row">
+        <span class="pay-amount-label" data-i18n="pay.amount">Сума</span>
+        <span class="pay-amount-val"><span id="pay-sol-amount">—</span> SOL <small id="pay-usd-amount">—</small></span>
+      </div>
+
+      <div class="pay-addr-box">
+        <div class="pay-addr-lbl" data-i18n="pay.wallet">Гаманець MIDAS (Solana · Mainnet)</div>
+        <div class="pay-addr-val" id="pay-addr">75yDY4giasvFt8kRxnBaNcLEbeJatwvkfnQbq3aYymEM</div>
+      </div>
+
+      <div class="pay-qr">
+        <img id="pay-qr-img" alt="Solana Pay QR">
+      </div>
+
+      <div class="pay-actions">
+        <button class="btn-primary" onclick="copyPayAddr()" data-i18n="pay.copy">Копіювати адресу</button>
+        <button class="btn-ghost" onclick="openInPhantom()" data-i18n="pay.phantom">Phantom Wallet</button>
+      </div>
+
+      <div style="margin-top:14px">
+        <button class="btn-ghost" id="pay-confirm-btn" style="width:100%;padding:14px;border-color:var(--gold-bright);color:var(--gold-bright)" onclick="confirmPayment()" data-i18n="pay.confirm">
+          Я здійснив оплату ✓
+        </button>
+      </div>
+
+      <div class="pay-note" data-i18n="pay.note">Після відправки SOL натисніть «Я здійснив оплату» — ми перевіримо транзакцію і надамо доступ на цій же сторінці.</div>
+    </div>
+
+    <!-- ── SUCCESS STATE (shown after payment confirmed) ── -->
+    <div class="pay-inner pay-success" id="pay-success" style="display:none">
+      <div class="pay-success-icon">✓</div>
+      <div class="pay-title" style="text-align:center" data-i18n="pay.success_title">Оплату отримано</div>
+      <div class="pay-sub" style="text-align:center" data-i18n="pay.success_sub">Ваша підписка активна</div>
+
+      <div class="pay-access-card">
+        <div class="pay-access-label" data-i18n="pay.access_label">Ваш персональний доступ</div>
+        <div class="pay-access-plan" id="pay-success-plan">—</div>
+        <div class="pay-access-bot">
+          <div class="tg-icon">
+            <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+              <defs><linearGradient id="tgG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#37BBFE"/><stop offset="1" stop-color="#007DBB"/></linearGradient></defs>
+              <circle cx="120" cy="120" r="120" fill="url(#tgG)"/>
+              <path d="M50 117l131-50c6-2 11 1 9 10l-22 105c-2 7-6 9-13 6l-35-26-17 17c-2 2-4 4-8 4l3-40 74-67c3-3-1-4-5-2l-91 58-40-13c-9-3-9-9 2-12z" fill="#fff"/>
+            </svg>
+          </div>
+          <div>
+            <div class="pay-access-bot-name">@goldgoldishbot</div>
+            <div class="pay-access-bot-sub" data-i18n="pay.bot_sub">Ваш персональний MIDAS-бот</div>
+          </div>
+        </div>
+        <a class="btn-primary pay-access-btn" id="pay-success-link" href="#" target="_blank" rel="noopener" data-i18n="pay.open_bot">Відкрити у Telegram →</a>
+      </div>
+
+      <div class="pay-note" data-i18n="pay.success_note">Збережіть це посилання — воно залишиться активним увесь період підписки. Сигнали почнуть надходити одразу після /start у боті.</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  i18n TRANSLATIONS
+// ══════════════════════════════════════════════════════════════
+const translations = {
+  uk: {
+    'nav.metrics': 'Метрики', 'nav.methodology': 'Методологія', 'nav.hall': 'Зал Слави',
+    'nav.pricing': 'Підписка', 'nav.login': 'Увійти / Реєстрація', 'nav.profile': 'Профіль',
+    'nav.subscription': 'Підписка', 'nav.logout': 'Вийти',
+    'hero.eyebrow': 'Дипломний Проект · 2025', 'hero.subtitle': 'Алхімія Прогнозів',
+    'hero.desc': 'Математична точність моделі ARIMA, інтегрована в алгоритм аналізу ринку дорогоцінних металів. Ми перетворюємо шум даних на чіткий сигнал.',
+    'hero.cta_primary': 'Запустити Механізм', 'hero.cta_secondary': 'Переглянути Аналітику', 'hero.scroll': 'Гортати вниз',
+    'stats.label': 'Результати Бектесту', 'stats.title': 'Цифри, які', 'stats.title_em': 'не брешуть', 'stats.btn': 'Детальна Аналітика →',
+    'kpi.trades': 'Кількість Угод', 'kpi.pcs': 'шт', 'kpi.trades_sub': 'Загалом за period',
+    'kpi.tp_delta': '↑ +3% на угоду', 'kpi.sl_delta': '↓ -1% на угоду',
+    'kpi.var': 'Максимальний ризик', 'kpi.drawdown': 'Макс. Просадка', 'kpi.drawdown_sub': 'Пікова просадка', 'kpi.mc': '↑ Медіана позитивна',
+    'method.label': 'Технологія', 'method.subtitle': 'в кожній ітерації',
+    'method.f1_title': 'Автодекомпозиція Тренду', 'method.f1_desc': 'Виокремлення сезонної, трендової та залишкової компоненти часового ряду цін на золото.',
+    'method.f2_title': 'Очищення від Шуму', 'method.f2_desc': 'Диференціювання ряду до стаціонарного стану з перевіркою за тестом Дікі-Фуллера.',
+    'method.f3_title': 'Генерація Сигналів', 'method.f3_desc': 'Компаратор прогнозу та поточної ціни з порогом K≥0.4 формує BUY/SELL/SKIP.',
+    'formula.p': 'порядок авторегресії', 'formula.d': 'ступінь інтегрованості', 'formula.q': 'порядок ковзного середнього',
+    'metrics.label': 'Глибокий Аналіз', 'metrics.title': 'Аналітичний', 'metrics.title_em': 'Звіт Бектесту',
+    'charts.capital': 'Капітал: $10,000 початковий', 'charts.maxdd': 'Макс. просадка: -14.2%', 'charts.trades': 'угод', 'charts.sims': 'симуляцій',
+    'table.title': 'Зведена Таблиця Метрик', 'table.sub': 'Повний звіт бектесту',
+    'table.metric': 'Метрика', 'table.value': 'Значення', 'table.strategy': 'Стратегія', 'table.grade': 'Оцінка',
+    'table.r1': 'Загальна кількість угод', 'table.r2': 'Take Profit спрацювань', 'table.r3': 'Stop Loss спрацювань',
+    'table.r4': 'SKIP сигналів', 'table.r5': 'Максимальна просадка', 'table.r6': 'VaR (95% довірчий інтервал)',
+    'table.r7': 'Медіана фінального капіталу', 'table.r8': '95-й перцентиль (MC)', 'table.r9': '5-й перцентиль (MC)', 'table.r10': 'Симуляцій Monte Carlo',
+    'table.per_trade': 'угоду', 'table.active': 'Активна', 'table.filtered': 'Фільтровано', 'table.norm': 'Норма',
+    'table.pos': 'Позитив', 'table.ctrl': 'Контроль', 'table.better': 'Краще', 'table.ok': 'Прийнятно',
+    'table.behind': 'Відстає', 'table.optimistic': 'Оптимістично', 'table.pessimistic': 'Песимістично', 'table.potential': 'Потенціал', 'table.risk': 'Ризик', 'table.stat': 'Статистично',
+    'table.from10k': 'Від $10,000',
+    'hall.label': 'Досягнення Трейдера', 'hall.title': 'Зал', 'hall.title_em': 'Слави',
+    'hall.desc': 'Сертифікати пройдених оцінювальних програм провідних проп-трейдингових компаній. Кожен сертифікат — підтвердження реальних навичок управління ризиками та стабільного прибутку.',
+    'months.dec': 'Грудня', 'months.feb': 'Лютого',
+    'cert.verified': 'Верифіковано · Otakar Suffner CEO', 'cert.verified2': 'Верифіковано · Saul Lokier CEO', 'cert.5ers': 'Funded Certificate Отримано',
+    'stats_card.label': 'Статистика Досягнень', 'stats_card.record': 'Трек Рекорд', 'stats_card.name': 'Підтверджені Результати', 'stats_card.active': 'Активний Трейдинг',
+    'arch.label': 'Як це Працює', 'arch.title': 'Технічна', 'arch.title_em': 'Архітектура',
+    'arch.s1_title': 'Збір та Нормалізація Даних', 'arch.s1_desc': 'Отримання OHLCV даних по XAU/USD з частотою 5-хвилинних свічок. Нормалізація, обробка пропусків.',
+    'arch.s2_title': 'ADF-тест на Стаціонарність', 'arch.s2_desc': 'Перевірка часового ряду тестом Augmented Dickey-Fuller. Диференціювання до стаціонарного стану d=1 або d=2.',
+    'arch.s3_title': 'Вибір параметрів (p, d, q)', 'arch.s3_desc': 'ACF/PACF аналіз для визначення лагів. Auto-ARIMA для автоматичного підбору з мінімізацією AIC/BIC.',
+    'arch.s4_title': 'Генерація Торгових Сигналів', 'arch.s4_desc': 'Порівняння прогнозованої ціни з поточною. При |Δ| ≥ K=0.4% — генерується сигнал BUY або SELL.',
+    'arch.s5_title': 'Управління Ризиками', 'arch.s5_desc': 'Жорсткий Stop Loss -1% та Take Profit +3%. Коефіцієнт ризик/прибуток 1:3 забезпечує позитивне матсподівання.',
+    'arch.full_model': 'Повна модель з MA та AR компонентами',
+    'arch.where': 'де B — оператор зсуву,\n∇ᵈ — різниця d-го порядку,\nφ — AR поліном порядку p,\nθ — MA поліном порядку q',
+    'arch.dist': 'Розподіл Прибутковості Угод',
+    'pricing.label': 'Доступ до Системи', 'pricing.title': 'Золоті', 'pricing.title_em': 'Сигнали',
+    'pricing.basic': 'Базовий', 'pricing.pro': 'Професійний', 'pricing.elite': 'Елітний',
+    'pricing.per_month': 'на місяць · автопоновлення', 'pricing.elite_period': 'на місяць · персональний менеджер',
+    'pricing.f1_1': 'Щоденні сигнали BUY/SELL', 'pricing.f1_2': 'Telegram сповіщення', 'pricing.f1_3': 'Тижневий звіт XAU/USD', 'pricing.f1_4': 'Доступ до Discord каналу',
+    'pricing.f2_1': 'Доступ до API прогнозів у реальному часі', 'pricing.f2_2': 'Telegram сповіщення з BUY/SELL/SKIP', 'pricing.f2_3': 'Щоденний аналітичний звіт по XAU/USD', 'pricing.f2_4': 'Повна статистика бектесту за весь період', 'pricing.f2_5': 'Monte Carlo аналіз вашого портфеля', 'pricing.f2_6': 'Доступ до закритого Discord каналу',
+    'pricing.f3_1': 'Все з Про плану', 'pricing.f3_2': 'Персональний менеджер рахунку', 'pricing.f3_3': 'Налаштування параметрів K під ваш стиль', 'pricing.f3_4': 'Прямий доступ до розробника', 'pricing.f3_5': 'Пріоритетна підтримка 24/7', 'pricing.f3_6': 'Щомісячний дзвінок-звіт 1-на-1',
+    'pricing.choose': 'Обрати план', 'pricing.subscribe': 'Оформити Підписку', 'pricing.contact': 'Контакт',
+    'pricing.soon': 'Оформлення підписки незабаром!', 'pricing.release': 'Функція оплати буде доступна після релізу', 'pricing.contact_us': "Зв'яжіться з нами для Elite доступу",
+    'footer.thesis': 'Дипломний Проект',
+    'auth.login': 'Вхід', 'auth.register': 'Реєстрація',
+    'auth.login_title': 'Вхід до Кабінету', 'auth.login_sub': 'Авторизація в системі MIDAS',
+    'auth.reg_title': 'Реєстрація', 'auth.reg_sub': 'Створіть акаунт у системі MIDAS',
+    'auth.email': 'Email адреса', 'auth.password': 'Пароль', 'auth.confirm_password': 'Підтвердити пароль', 'auth.fullname': "Повне ім'я",
+    'auth.login_btn': 'Увійти в механізм', 'auth.reg_btn': 'Створити Акаунт',
+    'auth.or': 'або', 'auth.no_account': 'Немає акаунту?', 'auth.go_register': 'Зареєструватися →',
+    'auth.have_account': 'Вже маєте акаунт?', 'auth.go_login': 'Увійти →',
+    'auth.back': '← Повернутися на головну',
+    'auth.err_fill': 'Будь ласка, заповніть усі поля', 'auth.err_email': 'Введіть коректний email',
+    'auth.err_pass_short': 'Пароль має бути не менше 8 символів', 'auth.err_pass_match': 'Паролі не збігаються',
+    'auth.err_exists': 'Акаунт з таким email вже існує', 'auth.success_reg': 'Акаунт створено! Виконую вхід…',
+    'auth.err_not_found': 'Акаунт не знайдено', 'auth.err_wrong_pass': 'Невірний пароль',
+    'auth.welcome': 'Ласкаво просимо, ',
+    'pay.title': 'Оплата підписки', 'pay.sub': 'Переведіть SOL на вказану адресу',
+    'pay.plan': 'План', 'pay.amount': 'Сума', 'pay.wallet': 'Гаманець MIDAS (Solana · Mainnet)',
+    'pay.copy': 'Копіювати адресу', 'pay.phantom': 'Phantom Wallet',
+    'pay.note': 'Після відправки SOL натисніть «Я здійснив оплату» — ми перевіримо транзакцію і надамо доступ на цій же сторінці.',
+    'pay.confirm': 'Я здійснив оплату ✓',
+    'pay.success_title': 'Оплату отримано', 'pay.success_sub': 'Ваша підписка активна',
+    'pay.access_label': 'Ваш персональний доступ',
+    'pay.bot_sub': 'Ваш персональний MIDAS-бот',
+    'pay.open_bot': 'Відкрити у Telegram →',
+    'pay.success_note': 'Збережіть це посилання — воно залишиться активним увесь період підписки. Сигнали почнуть надходити одразу після /start у боті.',
+  },
+  en: {
+    'nav.metrics': 'Metrics', 'nav.methodology': 'Methodology', 'nav.hall': 'Hall of Fame',
+    'nav.pricing': 'Pricing', 'nav.login': 'Sign In / Sign Up', 'nav.profile': 'Profile',
+    'nav.subscription': 'Subscription', 'nav.logout': 'Log Out',
+    'hero.eyebrow': 'Thesis Project · 2025', 'hero.subtitle': 'Alchemy of Forecasts',
+    'hero.desc': 'Mathematical precision of the ARIMA model integrated into a precious metals market analysis algorithm. We transform data noise into a clear signal.',
+    'hero.cta_primary': 'Launch Mechanism', 'hero.cta_secondary': 'View Analytics', 'hero.scroll': 'Scroll down',
+    'stats.label': 'Backtest Results', 'stats.title': 'Numbers that', 'stats.title_em': "don't lie", 'stats.btn': 'Detailed Analytics →',
+    'kpi.trades': 'Total Trades', 'kpi.pcs': 'pcs', 'kpi.trades_sub': 'Total over period',
+    'kpi.tp_delta': '↑ +3% per trade', 'kpi.sl_delta': '↓ -1% per trade',
+    'kpi.var': 'Maximum risk', 'kpi.drawdown': 'Max Drawdown', 'kpi.drawdown_sub': 'Peak drawdown', 'kpi.mc': '↑ Median positive',
+    'method.label': 'Technology', 'method.subtitle': 'in every iteration',
+    'method.f1_title': 'Trend Auto-Decomposition', 'method.f1_desc': 'Extraction of seasonal, trend and residual components of the gold price time series.',
+    'method.f2_title': 'Noise Filtering', 'method.f2_desc': 'Differencing the series to a stationary state verified by the Dickey-Fuller test.',
+    'method.f3_title': 'Signal Generation', 'method.f3_desc': 'Comparing forecast vs. current price with threshold K≥0.4 produces BUY/SELL/SKIP.',
+    'formula.p': 'autoregression order', 'formula.d': 'degree of integration', 'formula.q': 'moving average order',
+    'metrics.label': 'Deep Analysis', 'metrics.title': 'Analytical', 'metrics.title_em': 'Backtest Report',
+    'charts.capital': 'Capital: $10,000 initial', 'charts.maxdd': 'Max drawdown: -14.2%', 'charts.trades': 'trades', 'charts.sims': 'simulations',
+    'table.title': 'Summary Metrics Table', 'table.sub': 'Full backtest report',
+    'table.metric': 'Metric', 'table.value': 'Value', 'table.strategy': 'Strategy', 'table.grade': 'Grade',
+    'table.r1': 'Total number of trades', 'table.r2': 'Take Profit triggers', 'table.r3': 'Stop Loss triggers',
+    'table.r4': 'SKIP signals', 'table.r5': 'Maximum drawdown', 'table.r6': 'VaR (95% confidence interval)',
+    'table.r7': 'Median final capital', 'table.r8': '95th percentile (MC)', 'table.r9': '5th percentile (MC)', 'table.r10': 'Monte Carlo simulations',
+    'table.per_trade': 'trade', 'table.active': 'Active', 'table.filtered': 'Filtered', 'table.norm': 'Normal',
+    'table.pos': 'Positive', 'table.ctrl': 'Control', 'table.better': 'Better', 'table.ok': 'Acceptable',
+    'table.behind': 'Behind', 'table.optimistic': 'Optimistic', 'table.pessimistic': 'Pessimistic', 'table.potential': 'Potential', 'table.risk': 'Risk', 'table.stat': 'Statistical',
+    'table.from10k': 'From $10,000',
+    'hall.label': 'Trader Achievements', 'hall.title': 'Hall of', 'hall.title_em': 'Fame',
+    'hall.desc': 'Certificates from leading prop trading company evaluation programs. Each certificate confirms real risk management skills and consistent profitability.',
+    'months.dec': 'December', 'months.feb': 'February',
+    'cert.verified': 'Verified · Otakar Suffner CEO', 'cert.verified2': 'Verified · Saul Lokier CEO', 'cert.5ers': 'Funded Certificate Received',
+    'stats_card.label': 'Achievement Statistics', 'stats_card.record': 'Track Record', 'stats_card.name': 'Confirmed Results', 'stats_card.active': 'Active Trading',
+    'arch.label': 'How It Works', 'arch.title': 'Technical', 'arch.title_em': 'Architecture',
+    'arch.s1_title': 'Data Collection & Normalization', 'arch.s1_desc': 'Fetching OHLCV data for XAU/USD at 5-minute candle frequency. Normalization, gap handling.',
+    'arch.s2_title': 'ADF Stationarity Test', 'arch.s2_desc': 'Time series testing with Augmented Dickey-Fuller. Differencing to stationary state d=1 or d=2.',
+    'arch.s3_title': 'Parameter Selection (p, d, q)', 'arch.s3_desc': 'ACF/PACF analysis for lag determination. Auto-ARIMA for automatic selection minimizing AIC/BIC.',
+    'arch.s4_title': 'Trading Signal Generation', 'arch.s4_desc': 'Comparing forecast price to current. At |Δ| ≥ K=0.4% — BUY or SELL signal is generated.',
+    'arch.s5_title': 'Risk Management', 'arch.s5_desc': 'Strict Stop Loss -1% and Take Profit +3%. Risk/reward ratio 1:3 ensures positive expectation.',
+    'arch.full_model': 'Full model with MA and AR components',
+    'arch.where': 'where B — backshift operator,\n∇ᵈ — d-th order difference,\nφ — AR polynomial of order p,\nθ — MA polynomial of order q',
+    'arch.dist': 'Trade Profitability Distribution',
+    'pricing.label': 'System Access', 'pricing.title': 'Golden', 'pricing.title_em': 'Signals',
+    'pricing.basic': 'Basic', 'pricing.pro': 'Professional', 'pricing.elite': 'Elite',
+    'pricing.per_month': 'per month · auto-renewal', 'pricing.elite_period': 'per month · personal manager',
+    'pricing.f1_1': 'Daily BUY/SELL signals', 'pricing.f1_2': 'Telegram notifications', 'pricing.f1_3': 'Weekly XAU/USD report', 'pricing.f1_4': 'Discord channel access',
+    'pricing.f2_1': 'Real-time forecast API access', 'pricing.f2_2': 'Telegram BUY/SELL/SKIP alerts', 'pricing.f2_3': 'Daily XAU/USD analytical report', 'pricing.f2_4': 'Full backtest statistics', 'pricing.f2_5': 'Monte Carlo portfolio analysis', 'pricing.f2_6': 'Private Discord channel access',
+    'pricing.f3_1': 'Everything in Pro plan', 'pricing.f3_2': 'Personal account manager', 'pricing.f3_3': 'Custom K parameter tuning', 'pricing.f3_4': 'Direct developer access', 'pricing.f3_5': 'Priority 24/7 support', 'pricing.f3_6': 'Monthly 1-on-1 report call',
+    'pricing.choose': 'Choose Plan', 'pricing.subscribe': 'Subscribe Now', 'pricing.contact': 'Contact Us',
+    'pricing.soon': 'Subscription coming soon!', 'pricing.release': 'Payment available after release', 'pricing.contact_us': 'Contact us for Elite access',
+    'footer.thesis': 'Thesis Project',
+    'auth.login': 'Sign In', 'auth.register': 'Sign Up',
+    'auth.login_title': 'Enter Cabinet', 'auth.login_sub': 'Authenticate to MIDAS system',
+    'auth.reg_title': 'Sign Up', 'auth.reg_sub': 'Create your MIDAS account',
+    'auth.email': 'Email address', 'auth.password': 'Password', 'auth.confirm_password': 'Confirm password', 'auth.fullname': 'Full name',
+    'auth.login_btn': 'Enter Mechanism', 'auth.reg_btn': 'Create Account',
+    'auth.or': 'or', 'auth.no_account': "Don't have an account?", 'auth.go_register': 'Sign Up →',
+    'auth.have_account': 'Already have an account?', 'auth.go_login': 'Sign In →',
+    'auth.back': '← Back to home',
+    'auth.err_fill': 'Please fill in all fields', 'auth.err_email': 'Please enter a valid email',
+    'auth.err_pass_short': 'Password must be at least 8 characters', 'auth.err_pass_match': 'Passwords do not match',
+    'auth.err_exists': 'An account with this email already exists', 'auth.success_reg': 'Account created! Signing in…',
+    'auth.err_not_found': 'Account not found', 'auth.err_wrong_pass': 'Incorrect password',
+    'auth.welcome': 'Welcome, ',
+    'pay.title': 'Subscription Payment', 'pay.sub': 'Send SOL to the address below',
+    'pay.plan': 'Plan', 'pay.amount': 'Amount', 'pay.wallet': 'MIDAS Wallet (Solana · Mainnet)',
+    'pay.copy': 'Copy Address', 'pay.phantom': 'Phantom Wallet',
+    'pay.note': 'After sending SOL, click "I completed the payment" — we will verify the transaction and grant access right on this page.',
+    'pay.confirm': 'I completed the payment ✓',
+    'pay.success_title': 'Payment Received', 'pay.success_sub': 'Your subscription is active',
+    'pay.access_label': 'Your personal access',
+    'pay.bot_sub': 'Your personal MIDAS bot',
+    'pay.open_bot': 'Open in Telegram →',
+    'pay.success_note': 'Save this link — it stays active for the entire subscription period. Signals start flowing right after /start in the bot.',
+  }
+};
+
+let currentLang = 'uk';
+function t(key) { return translations[currentLang][key] || translations['uk'][key] || key; }
+
+function setLang(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (key && translations[lang][key] !== undefined) {
+      el.textContent = translations[lang][key];
+    }
+  });
+  document.getElementById('btn-uk').classList.toggle('active', lang === 'uk');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  localStorage.setItem('midas_lang', lang);
+  if (typeof renderMode === 'function') renderMode();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  AUTH — localStorage-based real persistence
+// ══════════════════════════════════════════════════════════════
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem('midas_users') || '{}'); } catch { return {}; }
+}
+function saveUsers(users) { localStorage.setItem('midas_users', JSON.stringify(users)); }
+function getCurrentUser() {
+  try { return JSON.parse(localStorage.getItem('midas_session') || 'null'); } catch { return null; }
+}
+function setCurrentUser(user) {
+  if (user) localStorage.setItem('midas_session', JSON.stringify(user));
+  else localStorage.removeItem('midas_session');
+}
+
+function updateNavAuth() {
+  const user = getCurrentUser();
+  if (user) {
+    document.getElementById('nav-auth-btn').style.display = 'none';
+    document.getElementById('nav-user-chip').style.display = 'block';
+    const name = user.name || user.email;
+    document.getElementById('user-nav-name').textContent = name.split(' ')[0];
+    document.getElementById('user-avatar-init').textContent = name[0].toUpperCase();
+  } else {
+    document.getElementById('nav-auth-btn').style.display = 'block';
+    document.getElementById('nav-user-chip').style.display = 'none';
+  }
+}
+
+function showAuthMsg(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = 'auth-msg ' + type;
+  el.textContent = msg;
+}
+function clearAuthMsg(id) {
+  const el = document.getElementById(id);
+  el.className = 'auth-msg';
+  el.textContent = '';
+}
+
+function doRegister() {
+  clearAuthMsg('reg-msg');
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim().toLowerCase();
+  const pass = document.getElementById('reg-password').value;
+  const pass2 = document.getElementById('reg-password2').value;
+
+  if (!name || !email || !pass || !pass2) { showAuthMsg('reg-msg', 'error', t('auth.err_fill')); return; }
+  if (!email.includes('@') || !email.includes('.')) { showAuthMsg('reg-msg', 'error', t('auth.err_email')); return; }
+  if (pass.length < 8) { showAuthMsg('reg-msg', 'error', t('auth.err_pass_short')); return; }
+  if (pass !== pass2) { showAuthMsg('reg-msg', 'error', t('auth.err_pass_match')); return; }
+
+  const users = getUsers();
+  if (users[email]) { showAuthMsg('reg-msg', 'error', t('auth.err_exists')); return; }
+
+  // Simple hash (xor + base64-like) — good enough for a demo
+  const hashed = btoa(unescape(encodeURIComponent(pass + 'midas_salt_2025')));
+  users[email] = { name, email, password: hashed, createdAt: new Date().toISOString() };
+  saveUsers(users);
+
+  showAuthMsg('reg-msg', 'success', t('auth.success_reg'));
+  setTimeout(() => {
+    setCurrentUser({ name, email });
+    updateNavAuth();
+    showSection('home-wrapper');
+    showToast(t('auth.welcome') + name.split(' ')[0] + '!');
+  }, 1000);
+}
+
+function doLogin() {
+  clearAuthMsg('login-msg');
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass = document.getElementById('login-password').value;
+
+  if (!email || !pass) { showAuthMsg('login-msg', 'error', t('auth.err_fill')); return; }
+
+  const users = getUsers();
+  if (!users[email]) { showAuthMsg('login-msg', 'error', t('auth.err_not_found')); return; }
+
+  const hashed = btoa(unescape(encodeURIComponent(pass + 'midas_salt_2025')));
+  if (users[email].password !== hashed) { showAuthMsg('login-msg', 'error', t('auth.err_wrong_pass')); return; }
+
+  setCurrentUser({ name: users[email].name, email });
+  updateNavAuth();
+  showSection('home-wrapper');
+  showToast(t('auth.welcome') + users[email].name.split(' ')[0] + '!');
+}
+
+function logout() {
+  setCurrentUser(null);
+  updateNavAuth();
+  showToast(currentLang === 'uk' ? 'Ви вийшли з системи' : 'You have been logged out');
+}
+
+function handleLaunchClick() {
+  if (getCurrentUser()) {
+    scrollToSection('metrics-section');
+  } else {
+    showSection('auth-page');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  STEAMPUNK GEARS
+// ══════════════════════════════════════════════════════════════
+const canvas = document.getElementById('gear-canvas');
+const ctx = canvas.getContext('2d');
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function drawSteampunkGear(cx, cy, outerR, innerR, numTeeth, rotation, alpha, primaryColor, accentColor) {
+  ctx.save(); ctx.globalAlpha = alpha;
+  const toothStep = (Math.PI * 2) / numTeeth;
+  const toothHalf = toothStep * 0.38;
+  const roundness = 0.06;
+  ctx.beginPath();
+  for (let i = 0; i < numTeeth; i++) {
+    const baseAngle = toothStep * i + rotation;
+    const a0 = baseAngle - toothStep * 0.5, a1 = baseAngle - toothHalf + roundness;
+    const a2 = baseAngle - toothHalf, a3 = baseAngle + toothHalf;
+    const a4 = baseAngle + toothHalf + roundness, a5 = baseAngle + toothStep * 0.5;
+    const p0x = cx + Math.cos(a0)*innerR, p0y = cy + Math.sin(a0)*innerR;
+    const p2x = cx + Math.cos(a2)*outerR, p2y = cy + Math.sin(a2)*outerR;
+    const p3x = cx + Math.cos(a3)*outerR, p3y = cy + Math.sin(a3)*outerR;
+    const p5x = cx + Math.cos(a5)*innerR, p5y = cy + Math.sin(a5)*innerR;
+    if (i === 0) ctx.moveTo(p0x, p0y); else ctx.lineTo(p0x, p0y);
+    ctx.quadraticCurveTo(cx+Math.cos(a1)*(innerR+6), cy+Math.sin(a1)*(innerR+6), p2x, p2y);
+    ctx.lineTo(p3x, p3y);
+    ctx.quadraticCurveTo(cx+Math.cos(a4)*(innerR+6), cy+Math.sin(a4)*(innerR+6), p5x, p5y);
+  }
+  ctx.closePath();
+  const grad = ctx.createRadialGradient(cx,cy,innerR*0.3,cx,cy,outerR);
+  grad.addColorStop(0,'rgba(35,22,8,0.9)'); grad.addColorStop(0.6,'rgba(22,14,5,0.92)'); grad.addColorStop(1,'rgba(13,9,3,0.95)');
+  ctx.fillStyle = grad; ctx.fill(); ctx.strokeStyle = primaryColor; ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,innerR*0.82,0,Math.PI*2); ctx.strokeStyle = accentColor; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,innerR*0.55,0,Math.PI*2); ctx.strokeStyle = accentColor; ctx.lineWidth = 1; ctx.stroke();
+  const spokeCount = numTeeth > 18 ? 8 : 6;
+  for (let i = 0; i < spokeCount; i++) {
+    const a = (Math.PI*2/spokeCount)*i+rotation*0.5;
+    const r1=innerR*0.2, r2=innerR*0.76, midR=innerR*0.5;
+    ctx.save(); ctx.globalAlpha=alpha*0.8; ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*r1, cy+Math.sin(a)*r1);
+    ctx.quadraticCurveTo(cx+Math.cos(a+0.15)*midR, cy+Math.sin(a+0.15)*midR, cx+Math.cos(a)*r2, cy+Math.sin(a)*r2);
+    ctx.strokeStyle=primaryColor; ctx.lineWidth=2.5; ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.globalAlpha=alpha*0.9; ctx.beginPath();
+    ctx.arc(cx+Math.cos(a)*r2, cy+Math.sin(a)*r2, 3.5, 0, Math.PI*2);
+    ctx.fillStyle=accentColor; ctx.fill(); ctx.restore();
+  }
+  ctx.beginPath(); ctx.arc(cx,cy,innerR*0.16,0,Math.PI*2);
+  const hubGrad = ctx.createRadialGradient(cx-2,cy-2,1,cx,cy,innerR*0.16);
+  hubGrad.addColorStop(0,accentColor); hubGrad.addColorStop(1,primaryColor);
+  ctx.fillStyle=hubGrad; ctx.fill(); ctx.strokeStyle=primaryColor; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.restore();
+}
+
+const gears = [
+  {cx:()=>canvas.width-100,cy:()=>-100,or:240,ir:170,teeth:28,speed:0.00022,dir:1,alpha:0.22},
+  {cx:()=>canvas.width+10,cy:()=>200,or:150,ir:106,teeth:18,speed:0.00058,dir:-1,alpha:0.15},
+  {cx:()=>-80,cy:()=>canvas.height+80,or:200,ir:142,teeth:24,speed:0.00038,dir:-1,alpha:0.18},
+  {cx:()=>80,cy:()=>canvas.height,or:100,ir:72,teeth:12,speed:0.00094,dir:1,alpha:0.12},
+  {cx:()=>canvas.width*0.38,cy:()=>canvas.height+40,or:76,ir:54,teeth:10,speed:0.0014,dir:-1,alpha:0.08},
+  {cx:()=>canvas.width*0.15,cy:()=>-40,or:90,ir:65,teeth:11,speed:0.00076,dir:1,alpha:0.1},
+];
+let rot = gears.map(()=>Math.random()*Math.PI*2);
+let carouselGearBoost = 0;
+let lastTime = 0;
+
+function animateGears(timestamp) {
+  const dt = Math.min(timestamp - lastTime, 50); lastTime = timestamp;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const boost = 1 + carouselGearBoost * 4;
+  gears.forEach((g, i) => {
+    rot[i] += g.speed * dt * g.dir * boost;
+    const isMain = i===0;
+    const primaryColor = isMain ? '#C5A059' : (i===2 ? '#A38040' : '#7A5E28');
+    const accentColor = isMain ? '#E8D5A3' : '#C5A059';
+    drawSteampunkGear(g.cx(), g.cy(), g.or, g.ir, g.teeth, rot[i], g.alpha, primaryColor, accentColor);
+  });
+  carouselGearBoost *= 0.96;
+  requestAnimationFrame(animateGears);
+}
+requestAnimationFrame(animateGears);
+
+// ══════════════════════════════════════════════════════════════
+//  CAROUSEL
+// ══════════════════════════════════════════════════════════════
+let currentSlide = 1;
+const totalSlides = 3;
+const stateMap = (current, index) => {
+  const diff = index - current;
+  if (diff===0) return 'center'; if (diff===1) return 'right'; if (diff===-1) return 'left';
+  if (diff>=2) return 'far-right'; if (diff<=-2) return 'far-left';
+};
+function updateCarousel() {
+  document.querySelectorAll('.pricing-card').forEach((card,i)=>card.setAttribute('data-state',stateMap(currentSlide,i)));
+  document.querySelectorAll('.carousel-dot').forEach((dot,i)=>dot.classList.toggle('active',i===currentSlide));
+  carouselGearBoost = 1;
+}
+function moveCarousel(dir) { currentSlide = Math.max(0,Math.min(totalSlides-1,currentSlide+dir)); updateCarousel(); }
+function goToSlide(i) { currentSlide=i; updateCarousel(); }
+document.querySelectorAll('.pricing-card').forEach((card,i)=>{
+  card.addEventListener('click',()=>{
+    const state = card.getAttribute('data-state');
+    if (state==='left'||state==='far-left') moveCarousel(-1);
+    else if (state==='right'||state==='far-right') moveCarousel(1);
+  });
+});
+updateCarousel();
+
+// ══════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════════
+function showSection(id) {
+  document.getElementById('home-wrapper').classList.remove('active');
+  document.getElementById('home-wrapper').style.display = 'none';
+  document.getElementById('auth-page').style.display = 'none';
+  document.getElementById('auth-page').classList.remove('active');
+  if (id==='home-wrapper') { document.getElementById('home-wrapper').classList.add('active'); document.getElementById('home-wrapper').style.display='block'; }
+  else if (id==='auth-page') { document.getElementById('auth-page').style.display='flex'; document.getElementById('auth-page').classList.add('active'); }
+}
+function scrollDown() { document.getElementById('home-wrapper').scrollBy({top:window.innerHeight,behavior:'smooth'}); }
+function scrollToSection(id) {
+  showSection('home-wrapper');
+  setTimeout(()=>{
+    const hw = document.getElementById('home-wrapper');
+    hw.scrollTo({top:hw.scrollHeight,behavior:'smooth'});
+    setTimeout(()=>{ const el=document.getElementById(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); },400);
+  },100);
+}
+function switchTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(tab==='login'&&i===0)||(tab==='register'&&i===1)));
+  document.getElementById('form-login').classList.toggle('active',tab==='login');
+  document.getElementById('form-register').classList.toggle('active',tab==='register');
+  clearAuthMsg('login-msg'); clearAuthMsg('reg-msg');
+}
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MODE (XAU / BTC)
+// ══════════════════════════════════════════════════════════════
+const MODE_DATA = {
+  xau: {
+    section_title_em: { uk: 'не брешуть', en: "don't lie" },
+    metrics_title_em: { uk: 'Звіт Бектесту XAU/USD', en: 'XAU/USD Backtest Report' },
+    instr_label:      { uk: 'Золото · XAU/USD · H1 · 6611 свічок · 2025-04 → 2026-04 · rolling5_sell', en: 'Gold · XAU/USD · H1 · 6611 candles · 2025-04 → 2026-04 · rolling5_sell' },
+    kpis: [
+      { lbl_uk:'Кількість Угод', lbl_en:'Total Trades', val:'337',    unit_uk:'шт',   unit_en:'pcs',   delta_uk:'rolling5_sell active',       delta_en:'rolling5_sell active',        cls:'' },
+      { lbl_uk:'Total PnL',      lbl_en:'Total PnL',    val:'+28.57', unit_uk:'%',    unit_en:'%',     delta_uk:'↑ +5.85 п.п. vs baseline',   delta_en:'↑ +5.85 pts vs baseline',     cls:'pos' },
+      { lbl_uk:'Win Rate',       lbl_en:'Win Rate',     val:'57.9',   unit_uk:'%',    unit_en:'%',     delta_uk:'↑ Найкращий серед правил',   delta_en:'↑ Best among rules',          cls:'pos' },
+      { lbl_uk:'Profit Factor',  lbl_en:'Profit Factor',val:'1.35',   unit_uk:'',     unit_en:'',      delta_uk:'↑ +0.10 vs baseline',        delta_en:'↑ +0.10 vs baseline',         cls:'pos' },
+      { lbl_uk:'SELL-сегмент',   lbl_en:'SELL segment', val:'+1.0',   unit_uk:'%',    unit_en:'%',     delta_uk:'↑ Flip з -15% → +1%',        delta_en:'↑ Flipped from -15% → +1%',   cls:'pos' },
+      { lbl_uk:'Фільтровано',    lbl_en:'Filtered',     val:'1670',   unit_uk:'skip', unit_en:'skip',  delta_uk:'↑ Quality > quantity',       delta_en:'↑ Quality > quantity',        cls:'pos' },
+    ],
+    charts: [
+      ['Price & Signals', 'XAU/USD H1 · rolling5_sell активний', 'bt_signals.png'],
+      ['Equity vs Buy & Hold', '$10,000 · +28.57% / 337 угод · PF 1.35', 'bt_equity.png'],
+      ['Drawdown (%)', 'Просадка від пікового equity', 'bt_drawdown.png'],
+      ['Adaptive Rule Comparison', '6 правил · rolling5_sell — переможець', 'bt_direction.png'],
+      ['Filter Rejections', '~75% сигналів відсіяно', 'bt_filters.png'],
+      ['Before vs After', 'rolling5_sell: -15% → +1% на SELL', 'bt_last15.png'],
+    ],
+    table: [
+      ['Загальна кількість угод','Total trades','337','ARIMA v2 + rolling5_sell','—','Активна','Active',''],
+      ['Win Rate','Win Rate','57.9%','Best among adaptive rules','—','Позитив','Positive','pos'],
+      ['Total PnL','Total PnL','+28.57%','+5.85 п.п. vs baseline','≈+14.5%','Краще','Better','pos'],
+      ['Profit Factor','Profit Factor','1.35','+0.10 vs baseline','—','Позитив','Positive','pos'],
+      ['SELL-сегмент PnL','SELL segment PnL','+1.0%','Було -4.8% (baseline)','—','Flip','Flipped','pos'],
+      ['Baseline PnL (always_both)','Baseline PnL','+22.72%','PF 1.25 · WR 56.5%','—','Слабше','Weaker','neg'],
+      ['always_nosell (hard off)','always_nosell','+27.54%','PF 1.38 · WR 58.6%','—','Альтернатива','Alt','pos'],
+      ['combo_htf_rolling','combo_htf_rolling','+28.44%','PF 1.37 · WR 58.1%','—','Близько','Close','pos'],
+      ['SELL_ROLL_N','SELL_ROLL_N','5','Rolling window','—','Налаштування','Setting',''],
+      ['Тестовий період','Test period','6611h','2025-04 → 2026-04 (H1)','—','Статистично','Statistical',''],
+    ],
+  },
+  btc: {
+    section_title_em: { uk: 'не брешуть', en: "don't lie" },
+    metrics_title_em: { uk: 'Звіт Бектесту BTC/USDT', en: 'BTC/USDT Backtest Report' },
+    instr_label:      { uk: 'Біткоін · BTC/USDT · H1 · 11987 свічок · 2024-12 → 2026-04 · ER=0.20 · ATR=0.40 · htf_slope', en: 'Bitcoin · BTC/USDT · H1 · 11987 candles · 2024-12 → 2026-04 · ER=0.20 · ATR=0.40 · htf_slope' },
+    kpis: [
+      { lbl_uk:'Кількість Угод', lbl_en:'Total Trades',   val:'102',   unit_uk:'шт',   unit_en:'pcs',  delta_uk:'2.4× vs попередня конфіг.',   delta_en:'2.4× vs previous config',   cls:'pos' },
+      { lbl_uk:'Total PnL',      lbl_en:'Total PnL',      val:'+19.00',unit_uk:'%',    unit_en:'%',    delta_uk:'↑ 3.4× vs попередня',         delta_en:'↑ 3.4× vs previous',        cls:'pos' },
+      { lbl_uk:'Win Rate',       lbl_en:'Win Rate',       val:'57.8',  unit_uk:'%',    unit_en:'%',    delta_uk:'↑ 59 / 102 угод',             delta_en:'↑ 59 / 102 trades',         cls:'pos' },
+      { lbl_uk:'Profit Factor',  lbl_en:'Profit Factor',  val:'1.61',  unit_uk:'',     unit_en:'',     delta_uk:'↑ +0.20 vs попередня',        delta_en:'↑ +0.20 vs previous',       cls:'pos' },
+      { lbl_uk:'Частота угод',   lbl_en:'Trade Frequency',val:'~6',    unit_uk:'/міс', unit_en:'/mo',  delta_uk:'htf_slope replaces tight ER', delta_en:'htf_slope replaces tight ER', cls:'pos' },
+      { lbl_uk:'Regime Filter',  lbl_en:'Regime Filter',  val:'htf',   unit_uk:'slope',unit_en:'slope',delta_uk:'EMA200 · 24h slope',          delta_en:'EMA200 · 24h slope',        cls:'pos' },
+    ],
+    charts: [
+      ['Price & Signals', 'BTC/USDT H1 · ER=0.20 · ATR=0.40 · htf_slope', 'bt_btc_signals.png'],
+      ['Equity vs Buy & Hold', '$10,000 · +19.00% / 102 угод · PF 1.61', 'bt_btc_equity.png'],
+      ['Drawdown (%)', 'Просадка від пікового equity', 'bt_btc_drawdown.png'],
+      ['BUY vs SELL Balance', 'Обидва сегменти прибуткові — htf_slope керує regime', 'bt_btc_direction.png'],
+      ['Phase 4 Grid · Top 5', 'Looser ER з htf_slope активним', 'bt_btc_grid.png'],
+      ['Phase 1 → 2 → 4 Evolution', 'htf_slope виграє в кожній метриці', 'bt_btc_phases.png'],
+    ],
+    table: [
+      ['Загальна кількість угод','Total trades','102','Phase 4 — htf_slope','—','Активна','Active',''],
+      ['Win Rate','Win Rate','57.8%','59 / 102','—','Позитив','Positive','pos'],
+      ['Total PnL','Total PnL','+19.00%','3.4× vs Phase 2','—','Краще','Better','pos'],
+      ['Profit Factor','Profit Factor','1.61','+0.20 vs Phase 2','—','Сильно','Strong','pos'],
+      ['Частота','Frequency','~6/міс','2.4× vs Phase 2','—','Робастно','Robust','pos'],
+      ['KAUFMAN_ER_MIN','KAUFMAN_ER_MIN','0.20','Loosened (було 0.40)','—','Оновлено','Updated','pos'],
+      ['ATR_MULT','ATR_MULT','0.40','Без змін (hard threshold)','—','Фіксовано','Fixed',''],
+      ['htf_slope filter','htf_slope filter','ON','EMA200 · 24h slope','—','Новий','New','pos'],
+      ['Phase 1 (XAU params)','Phase 1 (XAU params)','+11.19%','PF 1.06 · ≈ random','—','Слабо','Weak','neg'],
+      ['Phase 2 (tight ER=0.40)','Phase 2 (tight ER=0.40)','+8.16%','PF 1.87 · low freq','—','Попередня','Previous',''],
+      ['Тестовий період','Test period','11987h','2024-12 → 2026-04 (H1)','—','Статистично','Statistical',''],
+    ],
+  },
+};
+
+let currentMode = 'xau';
+
+function renderMode() {
+  const data = MODE_DATA[currentMode];
+  const L = currentLang;
+  // KPI
+  const kpiHTML = data.kpis.map(k =>
+    `<div class="kpi-card">
+       <div class="kpi-label">${L==='uk'?k.lbl_uk:k.lbl_en}</div>
+       <div class="kpi-value">${k.val}<span class="kpi-unit">${L==='uk'?k.unit_uk:k.unit_en}</span></div>
+       <div class="kpi-delta ${k.cls}">${L==='uk'?k.delta_uk:k.delta_en}</div>
+     </div>`).join('');
+  document.getElementById('kpi-grid-dynamic').innerHTML = kpiHTML;
+
+  // Charts (6 panels, 2 per row)
+  const c = data.charts;
+  const chartsHTML = [0,2,4].map(i =>
+    `<div class="charts-row" style="margin-bottom:28px">
+      ${[i, i+1].map(j => `
+        <div class="chart-panel">
+          <div class="chart-header">
+            <span class="chart-title">${c[j][0]}</span>
+            <span class="chart-meta">${c[j][1]}</span>
+          </div>
+          <div class="backtest-img-wrap" style="height:260px;">
+            <img src="${c[j][2]}" style="object-fit:cover;height:260px;width:100%;" alt="${c[j][0]}">
+            <div class="img-overlay"></div>
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+  document.getElementById('charts-dynamic').innerHTML = chartsHTML;
+
+  // Table
+  const tbHTML = data.table.map(r => {
+    const [luk,len,val,strat,bh,guk,gen,cls] = r;
+    const valCls = cls ? `val ${cls}` : 'val';
+    const gCls = cls || 'style="color:var(--text-dim)"';
+    const gradeOpen = cls ? `class="${cls}"` : 'style="color:var(--text-dim)"';
+    return `<tr><td>${L==='uk'?luk:len}</td><td class="${valCls}">${val}</td><td>${strat}</td><td>${bh}</td><td ${gradeOpen}>${L==='uk'?guk:gen}</td></tr>`;
+  }).join('');
+  document.getElementById('table-dynamic').innerHTML = tbHTML;
+}
+
+function setMode(mode) {
+  if (mode === currentMode) return;
+  const prev = currentMode; currentMode = mode;
+  document.body.classList.toggle('mode-btc', mode === 'btc');
+  document.getElementById('mode-xau').classList.toggle('active', mode === 'xau');
+  document.getElementById('mode-btc').classList.toggle('active', mode === 'btc');
+  localStorage.setItem('midas_mode', mode);
+
+  // Spin coin animation + swap symbol at midpoint
+  const coin = document.getElementById('hero-coin');
+  coin.classList.remove('idle');
+  coin.classList.remove('spinning');
+  void coin.offsetWidth; // reflow
+  coin.classList.add('spinning');
+  setTimeout(() => {
+    document.getElementById('coin-xau').style.display = mode === 'xau' ? '' : 'none';
+    document.getElementById('coin-btc').style.display = mode === 'btc' ? '' : 'none';
+  }, 420);
+  setTimeout(() => {
+    coin.classList.remove('spinning');
+    coin.classList.add('idle');
+  }, 1220);
+
+  renderMode();
+  showToast(mode === 'xau'
+    ? (currentLang==='uk'?'Режим: Золото ◆':'Mode: Gold ◆')
+    : (currentLang==='uk'?'Режим: Біткоін ₿':'Mode: Bitcoin ₿'));
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SOLANA PAY
+// ══════════════════════════════════════════════════════════════
+const SOL_WALLET = '75yDY4giasvFt8kRxnBaNcLEbeJatwvkfnQbq3aYymEM';
+const SOL_USD_RATE = 165; // approx USD per SOL (fallback)
+const SOL_RPC_ENDPOINTS = [
+  'https://solana-rpc.publicnode.com',
+  'https://api.mainnet-beta.solana.com',
+];
+const LAMPORTS_PER_SOL = 1_000_000_000;
+
+async function solanaRpc(method, params) {
+  let lastErr;
+  for (const url of SOL_RPC_ENDPOINTS) {
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+      });
+      const j = await r.json();
+      if (j.error) throw new Error(j.error.message);
+      return j.result;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error('RPC failed');
+}
+
+async function fetchSolUsdRate() {
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+    const j = await r.json();
+    if (j.solana && j.solana.usd) return j.solana.usd;
+  } catch {}
+  return SOL_USD_RATE;
+}
+
+// Tolerance window (lamports) so slight discrepancies still count
+const LAMPORTS_TOLERANCE = 20_000; // 0.00002 SOL
+async function verifySolanaPayment(expectedLamports, sinceTs) {
+  const sigs = await solanaRpc('getSignaturesForAddress', [SOL_WALLET, { limit: 20 }]);
+  for (const s of sigs) {
+    if (s.err) continue;
+    // blockTime is seconds; allow txs up to 10 min before modal open in case of clock skew
+    if (s.blockTime && s.blockTime * 1000 < sinceTs - 10 * 60_000) continue;
+    const tx = await solanaRpc('getTransaction', [
+      s.signature,
+      { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 },
+    ]);
+    if (!tx || !tx.meta) continue;
+    const keys = tx.transaction.message.accountKeys.map(k => k.pubkey || k);
+    const idx = keys.indexOf(SOL_WALLET);
+    if (idx < 0) continue;
+    const delta = tx.meta.postBalances[idx] - tx.meta.preBalances[idx];
+    if (delta >= expectedLamports - LAMPORTS_TOLERANCE &&
+        delta <= expectedLamports + LAMPORTS_TOLERANCE) {
+      return { signature: s.signature, slot: s.slot, blockTime: s.blockTime };
+    }
+  }
+  return null;
+}
+const PLANS = {
+  basic: { name: 'Basic · $5',         usd: 5  },
+  pro:   { name: 'Professional · $10', usd: 10 },
+  elite: { name: 'Elite · $15',        usd: 15 },
+};
+const TG_BOT = 'https://t.me/goldgoldishbot';
+
+let currentPlanId = null;
+let currentPaySession = null; // {lamports, solStr, sinceTs}
+
+async function openPayModal(planId) {
+  const plan = PLANS[planId]; if (!plan) return;
+  currentPlanId = planId;
+  const rate = await fetchSolUsdRate();
+  const baseSol = plan.usd / rate;
+  // add 1-999 random lamports so each session has a unique amount for verification
+  const extraLamports = Math.floor(Math.random() * 999) + 1;
+  const lamports = Math.round(baseSol * LAMPORTS_PER_SOL) + extraLamports;
+  const solStr = (lamports / LAMPORTS_PER_SOL).toFixed(9).replace(/0+$/,'').replace(/\.$/,'');
+  currentPaySession = { lamports, solStr, sinceTs: Date.now() };
+
+  document.getElementById('pay-plan-name').textContent = plan.name;
+  document.getElementById('pay-sol-amount').textContent = solStr;
+  document.getElementById('pay-usd-amount').textContent = '≈ $' + plan.usd;
+  document.getElementById('pay-addr').textContent = SOL_WALLET;
+  const uri = `solana:${SOL_WALLET}?amount=${solStr}&label=MIDAS&message=${encodeURIComponent(plan.name)}`;
+  const qr = 'https://api.qrserver.com/v1/create-qr-code/?size=340x340&margin=2&data=' + encodeURIComponent(uri);
+  document.getElementById('pay-qr-img').src = qr;
+  document.getElementById('pay-qr-img').dataset.uri = uri;
+  // reset to payment view
+  document.querySelector('#pay-modal .pay-inner:not(.pay-success)').style.display = '';
+  document.getElementById('pay-success').style.display = 'none';
+  const btn = document.getElementById('pay-confirm-btn');
+  btn.disabled = false;
+  btn.textContent = t('pay.confirm');
+  btn.style.color = 'var(--gold-bright)';
+  document.getElementById('pay-modal').classList.add('open');
+}
+function closePayModal(e) {
+  if (e && e.target.id !== 'pay-modal') return;
+  document.getElementById('pay-modal').classList.remove('open');
+}
+
+async function confirmPayment() {
+  const plan = PLANS[currentPlanId]; if (!plan || !currentPaySession) return;
+  const btn = document.getElementById('pay-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = currentLang === 'uk' ? 'Перевіряю транзакцію...' : 'Verifying transaction...';
+  btn.style.color = 'var(--text-dim)';
+
+  let tx = null;
+  // Poll up to 6 times (~90s total) — Solana finalization usually 10-30s
+  for (let attempt = 1; attempt <= 6; attempt++) {
+    try {
+      tx = await verifySolanaPayment(currentPaySession.lamports, currentPaySession.sinceTs);
+    } catch (e) {
+      console.warn('RPC err', e);
+    }
+    if (tx) break;
+    btn.textContent = (currentLang === 'uk' ? 'Очікую підтвердження ' : 'Awaiting confirmation ') + `(${attempt}/6)`;
+    await new Promise(r => setTimeout(r, 15_000));
+  }
+
+  if (!tx) {
+    btn.disabled = false;
+    btn.textContent = currentLang === 'uk'
+      ? 'Транзакцію не знайдено — спробуйте ще раз'
+      : 'Transaction not found — try again';
+    btn.style.color = '#C4726A';
+    showToast(currentLang === 'uk'
+      ? 'Оплата не підтверджена. Переконайтесь що SOL відправлено на правильну адресу.'
+      : 'Payment not confirmed. Check that SOL was sent to the correct address.');
+    return;
+  }
+
+  // SUCCESS — transaction verified on-chain
+  const startParam = currentPlanId + '_' + tx.signature.slice(0, 10);
+  const url = TG_BOT + '?start=' + startParam;
+  document.getElementById('pay-success-plan').textContent = plan.name;
+  document.getElementById('pay-success-link').href = url;
+  // show tx signature (truncated) in success note
+  const noteEl = document.querySelector('#pay-success .pay-note');
+  if (noteEl) {
+    const shortSig = tx.signature.slice(0, 8) + '…' + tx.signature.slice(-8);
+    noteEl.innerHTML = t('pay.success_note') +
+      `<br><br><span style="color:var(--gold-dark);letter-spacing:0.15em">TX: <a href="https://solscan.io/tx/${tx.signature}" target="_blank" rel="noopener" style="color:var(--gold-bright);text-decoration:none">${shortSig} ↗</a></span>`;
+  }
+  // swap views
+  document.querySelector('#pay-modal .pay-inner:not(.pay-success)').style.display = 'none';
+  document.getElementById('pay-success').style.display = 'block';
+
+  const user = getCurrentUser();
+  if (user) {
+    const subs = JSON.parse(localStorage.getItem('midas_subs') || '{}');
+    subs[user.email] = {
+      plan: currentPlanId, planName: plan.name, tg: url,
+      tx: tx.signature, ts: Date.now(),
+    };
+    localStorage.setItem('midas_subs', JSON.stringify(subs));
+  }
+}
+function copyPayAddr() {
+  navigator.clipboard.writeText(SOL_WALLET).then(() => {
+    showToast(currentLang === 'uk' ? 'Адресу скопійовано ✓' : 'Address copied ✓');
+  }).catch(() => showToast('Copy failed'));
+}
+function openInPhantom() {
+  const uri = document.getElementById('pay-qr-img').dataset.uri;
+  if (window.solana && window.solana.isPhantom) {
+    window.open(uri, '_blank');
+  } else {
+    const deep = 'https://phantom.app/ul/browse/' + encodeURIComponent(location.href) + '?ref=' + encodeURIComponent(uri);
+    window.open(deep, '_blank');
+  }
+}
+
+// Enter key for auth
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('form-login').classList.contains('active') && document.getElementById('auth-page').style.display !== 'none') doLogin();
+    else if (document.getElementById('form-register').classList.contains('active') && document.getElementById('auth-page').style.display !== 'none') doRegister();
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
+(function init() {
+  const savedLang = localStorage.getItem('midas_lang') || 'uk';
+  const savedMode = localStorage.getItem('midas_mode') || 'xau';
+  currentMode = savedMode;
+  document.body.classList.toggle('mode-btc', savedMode === 'btc');
+  document.getElementById('mode-xau').classList.toggle('active', savedMode === 'xau');
+  document.getElementById('mode-btc').classList.toggle('active', savedMode === 'btc');
+  document.getElementById('coin-xau').style.display = savedMode === 'xau' ? '' : 'none';
+  document.getElementById('coin-btc').style.display = savedMode === 'btc' ? '' : 'none';
+  setLang(savedLang);
+  renderMode();
+  updateNavAuth();
+  showSection('home-wrapper');
+})();
+</script>
+</body>
+</html>
