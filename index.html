@@ -138,25 +138,9 @@ body.mode-btc .flag-ua, body.mode-btc .flag-en { /* keep flags */ }
 .lang-btn:not(.active):hover { background: rgba(197,160,89,0.1); color: var(--gold); }
 
 /* UA/EN flag inline */
-.flag-ua {
-  width: 20px; height: 13px; display: inline-block;
-  background: linear-gradient(to bottom, #FFD700 50%, #005BBB 50%); /* flipped: yellow top, blue bottom */
-  border-radius: 1px; flex-shrink: 0;
-}
-.flag-en {
-  width: 20px; height: 13px; display: inline-block; flex-shrink: 0;
-  border-radius: 1px; overflow: hidden; position: relative;
-  background: #012169;
-}
-.flag-en::before {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(to bottom right, transparent calc(50% - 1.5px), #fff calc(50% - 1.5px), #fff calc(50% + 1.5px), transparent calc(50% + 1.5px)),
-              linear-gradient(to bottom left, transparent calc(50% - 1.5px), #fff calc(50% - 1.5px), #fff calc(50% + 1.5px), transparent calc(50% + 1.5px));
-}
-.flag-en::after {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(transparent calc(50% - 2px), #CF142B calc(50% - 2px), #CF142B calc(50% + 2px), transparent calc(50% + 2px)),
-              linear-gradient(90deg, transparent calc(50% - 2px), #CF142B calc(50% - 2px), #CF142B calc(50% + 2px), transparent calc(50% + 2px));
+.flag-ua, .flag-en {
+  width: 22px; height: 15px; display: inline-block; flex-shrink: 0;
+  object-fit: cover; border-radius: 1px;
 }
 
 .nav-btn {
@@ -468,10 +452,10 @@ h1.hero-title em {
     <!-- Language Toggle -->
     <div class="lang-toggle">
       <button class="lang-btn active" id="btn-uk" onclick="setLang('uk')">
-        <span class="flag-ua"></span>UA
+        <img class="flag-ua" src="ukr.png" alt="UA">UA
       </button>
       <button class="lang-btn" id="btn-en" onclick="setLang('en')">
-        <span class="flag-en"></span>EN
+        <img class="flag-en" src="usa.png" alt="EN">EN
       </button>
     </div>
 
