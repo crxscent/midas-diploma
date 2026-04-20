@@ -1229,46 +1229,128 @@ window.addEventListener('resize', resizeCanvas);
 
 function drawSteampunkGear(cx, cy, outerR, innerR, numTeeth, rotation, alpha, primaryColor, accentColor) {
   ctx.save(); ctx.globalAlpha = alpha;
+
+  // ── tooth profile (involute-ish trapezoidal with rounded tips) ──
   const toothStep = (Math.PI * 2) / numTeeth;
-  const toothHalf = toothStep * 0.38;
-  const roundness = 0.06;
-  ctx.beginPath();
+  const rootR  = innerR + (outerR - innerR) * 0.15;  // dedendum
+  const pitchR = innerR + (outerR - innerR) * 0.55;  // pitch line
+  const tipR   = outerR;                              // addendum (tip)
+  const baseHalf = toothStep * 0.44;  // wider at root
+  const pitchHalf = toothStep * 0.30;
+  const tipHalf   = toothStep * 0.18; // narrower at tip → trapezoidal
+
+  const toothPath = new Path2D();
   for (let i = 0; i < numTeeth; i++) {
-    const baseAngle = toothStep * i + rotation;
-    const a0 = baseAngle - toothStep * 0.5, a1 = baseAngle - toothHalf + roundness;
-    const a2 = baseAngle - toothHalf, a3 = baseAngle + toothHalf;
-    const a4 = baseAngle + toothHalf + roundness, a5 = baseAngle + toothStep * 0.5;
-    const p0x = cx + Math.cos(a0)*innerR, p0y = cy + Math.sin(a0)*innerR;
-    const p2x = cx + Math.cos(a2)*outerR, p2y = cy + Math.sin(a2)*outerR;
-    const p3x = cx + Math.cos(a3)*outerR, p3y = cy + Math.sin(a3)*outerR;
-    const p5x = cx + Math.cos(a5)*innerR, p5y = cy + Math.sin(a5)*innerR;
-    if (i === 0) ctx.moveTo(p0x, p0y); else ctx.lineTo(p0x, p0y);
-    ctx.quadraticCurveTo(cx+Math.cos(a1)*(innerR+6), cy+Math.sin(a1)*(innerR+6), p2x, p2y);
-    ctx.lineTo(p3x, p3y);
-    ctx.quadraticCurveTo(cx+Math.cos(a4)*(innerR+6), cy+Math.sin(a4)*(innerR+6), p5x, p5y);
+    const a = toothStep * i + rotation;
+    // 6 points per tooth: root-left, pitch-left, tip-left, tip-right, pitch-right, root-right
+    const pts = [
+      [a - baseHalf,  rootR],
+      [a - pitchHalf, pitchR],
+      [a - tipHalf,   tipR],
+      [a + tipHalf,   tipR],
+      [a + pitchHalf, pitchR],
+      [a + baseHalf,  rootR],
+    ];
+    pts.forEach(([ang, r], j) => {
+      const x = cx + Math.cos(ang) * r, y = cy + Math.sin(ang) * r;
+      if (i === 0 && j === 0) toothPath.moveTo(x, y); else toothPath.lineTo(x, y);
+    });
+  }
+  toothPath.closePath();
+
+  // ── body fill: brushed-metal radial gradient ──
+  const body = ctx.createRadialGradient(cx - outerR*0.35, cy - outerR*0.35, innerR*0.1, cx, cy, outerR);
+  body.addColorStop(0.0, 'rgba(58, 40, 18, 0.95)');
+  body.addColorStop(0.35,'rgba(36, 24, 10, 0.96)');
+  body.addColorStop(0.75,'rgba(22, 14, 5, 0.96)');
+  body.addColorStop(1.0, 'rgba(10, 6, 2, 0.98)');
+  ctx.fillStyle = body; ctx.fill(toothPath);
+
+  // directional rim-light on outer edge (top-left) — fakes 3D bevel
+  ctx.save();
+  ctx.clip(toothPath);
+  const rim = ctx.createLinearGradient(cx - outerR, cy - outerR, cx + outerR, cy + outerR);
+  rim.addColorStop(0,    'rgba(232, 213, 163, 0.30)');
+  rim.addColorStop(0.35, 'rgba(197, 160, 89, 0.05)');
+  rim.addColorStop(0.7,  'rgba(0, 0, 0, 0.0)');
+  rim.addColorStop(1,    'rgba(0, 0, 0, 0.45)');
+  ctx.fillStyle = rim; ctx.fill(toothPath);
+  ctx.restore();
+
+  // crisp outline
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = primaryColor; ctx.lineWidth = 2; ctx.stroke(toothPath);
+
+  // ── inner rim rings (pitch + root circles) ──
+  ctx.beginPath(); ctx.arc(cx, cy, pitchR,      0, Math.PI*2);
+  ctx.strokeStyle = accentColor; ctx.lineWidth = 1;   ctx.globalAlpha = alpha*0.55; ctx.stroke();
+  ctx.globalAlpha = alpha;
+
+  ctx.beginPath(); ctx.arc(cx, cy, innerR*0.88, 0, Math.PI*2);
+  ctx.strokeStyle = primaryColor; ctx.lineWidth = 1.5; ctx.stroke();
+
+  ctx.beginPath(); ctx.arc(cx, cy, innerR*0.50, 0, Math.PI*2);
+  ctx.strokeStyle = accentColor; ctx.lineWidth = 1;   ctx.globalAlpha = alpha*0.7; ctx.stroke();
+  ctx.globalAlpha = alpha;
+
+  // ── spokes: tapered with edge shading ──
+  const spokeCount = numTeeth > 18 ? 6 : (numTeeth > 12 ? 5 : 4);
+  for (let i = 0; i < spokeCount; i++) {
+    const a = (Math.PI * 2 / spokeCount) * i + rotation * 0.5;
+    const r1 = innerR * 0.22, r2 = innerR * 0.82;
+    const halfW = 0.11;
+
+    const spoke = new Path2D();
+    spoke.moveTo(cx + Math.cos(a - halfW)*r1, cy + Math.sin(a - halfW)*r1);
+    spoke.lineTo(cx + Math.cos(a - halfW*0.55)*r2, cy + Math.sin(a - halfW*0.55)*r2);
+    spoke.lineTo(cx + Math.cos(a + halfW*0.55)*r2, cy + Math.sin(a + halfW*0.55)*r2);
+    spoke.lineTo(cx + Math.cos(a + halfW)*r1, cy + Math.sin(a + halfW)*r1);
+    spoke.closePath();
+
+    const sgrad = ctx.createLinearGradient(
+      cx + Math.cos(a - Math.PI/2)*innerR*0.1, cy + Math.sin(a - Math.PI/2)*innerR*0.1,
+      cx + Math.cos(a + Math.PI/2)*innerR*0.1, cy + Math.sin(a + Math.PI/2)*innerR*0.1
+    );
+    sgrad.addColorStop(0,   'rgba(232,213,163,0.55)');
+    sgrad.addColorStop(0.5, 'rgba(138, 104, 48, 0.75)');
+    sgrad.addColorStop(1,   'rgba(10, 6, 2, 0.6)');
+    ctx.fillStyle = sgrad; ctx.fill(spoke);
+    ctx.strokeStyle = primaryColor; ctx.lineWidth = 1; ctx.stroke(spoke);
+
+    // bolt at outer end
+    const bx = cx + Math.cos(a)*r2, by = cy + Math.sin(a)*r2;
+    const bg = ctx.createRadialGradient(bx - 1.5, by - 1.5, 0.5, bx, by, 4);
+    bg.addColorStop(0, accentColor); bg.addColorStop(1, primaryColor);
+    ctx.beginPath(); ctx.arc(bx, by, 3.2, 0, Math.PI*2);
+    ctx.fillStyle = bg; ctx.fill();
+    ctx.strokeStyle = 'rgba(10,6,2,0.7)'; ctx.lineWidth = 0.8; ctx.stroke();
+  }
+
+  // ── hub: hex bolt on top of beveled center disk ──
+  // outer disk
+  ctx.beginPath(); ctx.arc(cx, cy, innerR*0.22, 0, Math.PI*2);
+  const hd = ctx.createRadialGradient(cx - 2, cy - 2, 1, cx, cy, innerR*0.22);
+  hd.addColorStop(0, accentColor);
+  hd.addColorStop(0.6, primaryColor);
+  hd.addColorStop(1, 'rgba(40, 24, 8, 0.95)');
+  ctx.fillStyle = hd; ctx.fill();
+  ctx.strokeStyle = primaryColor; ctx.lineWidth = 1.2; ctx.stroke();
+
+  // hexagonal bolt head
+  const hexR = innerR * 0.13;
+  ctx.beginPath();
+  for (let k = 0; k < 6; k++) {
+    const ang = (Math.PI/3) * k + rotation;
+    const x = cx + Math.cos(ang) * hexR, y = cy + Math.sin(ang) * hexR;
+    if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   }
   ctx.closePath();
-  const grad = ctx.createRadialGradient(cx,cy,innerR*0.3,cx,cy,outerR);
-  grad.addColorStop(0,'rgba(35,22,8,0.9)'); grad.addColorStop(0.6,'rgba(22,14,5,0.92)'); grad.addColorStop(1,'rgba(13,9,3,0.95)');
-  ctx.fillStyle = grad; ctx.fill(); ctx.strokeStyle = primaryColor; ctx.lineWidth = 2; ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx,cy,innerR*0.82,0,Math.PI*2); ctx.strokeStyle = accentColor; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx,cy,innerR*0.55,0,Math.PI*2); ctx.strokeStyle = accentColor; ctx.lineWidth = 1; ctx.stroke();
-  const spokeCount = numTeeth > 18 ? 8 : 6;
-  for (let i = 0; i < spokeCount; i++) {
-    const a = (Math.PI*2/spokeCount)*i+rotation*0.5;
-    const r1=innerR*0.2, r2=innerR*0.76, midR=innerR*0.5;
-    ctx.save(); ctx.globalAlpha=alpha*0.8; ctx.beginPath();
-    ctx.moveTo(cx+Math.cos(a)*r1, cy+Math.sin(a)*r1);
-    ctx.quadraticCurveTo(cx+Math.cos(a+0.15)*midR, cy+Math.sin(a+0.15)*midR, cx+Math.cos(a)*r2, cy+Math.sin(a)*r2);
-    ctx.strokeStyle=primaryColor; ctx.lineWidth=2.5; ctx.stroke(); ctx.restore();
-    ctx.save(); ctx.globalAlpha=alpha*0.9; ctx.beginPath();
-    ctx.arc(cx+Math.cos(a)*r2, cy+Math.sin(a)*r2, 3.5, 0, Math.PI*2);
-    ctx.fillStyle=accentColor; ctx.fill(); ctx.restore();
-  }
-  ctx.beginPath(); ctx.arc(cx,cy,innerR*0.16,0,Math.PI*2);
-  const hubGrad = ctx.createRadialGradient(cx-2,cy-2,1,cx,cy,innerR*0.16);
-  hubGrad.addColorStop(0,accentColor); hubGrad.addColorStop(1,primaryColor);
-  ctx.fillStyle=hubGrad; ctx.fill(); ctx.strokeStyle=primaryColor; ctx.lineWidth=1.5; ctx.stroke();
+  const hg = ctx.createLinearGradient(cx - hexR, cy - hexR, cx + hexR, cy + hexR);
+  hg.addColorStop(0, 'rgba(232,213,163,0.95)');
+  hg.addColorStop(1, 'rgba(90, 60, 22, 0.95)');
+  ctx.fillStyle = hg; ctx.fill();
+  ctx.strokeStyle = 'rgba(10,6,2,0.75)'; ctx.lineWidth = 1; ctx.stroke();
+
   ctx.restore();
 }
 
